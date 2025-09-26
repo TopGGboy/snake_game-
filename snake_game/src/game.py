@@ -4,7 +4,6 @@
 import pygame
 from src.configs.config import Config
 from src.states.main_menu import MainMenu
-from src.states.load_screen import LoadScreen
 from src.states.infinite_mode import InfiniteMode
 
 
@@ -73,20 +72,12 @@ class Game:
         """
         更新游戏状态
         """
-        # 如果当前状态完全且不需要返回主菜单
+        # 如果当前状态完成且不需要返回主菜单
         if self.state.finished and self.return_home_flage == False:
             self.next_state = self.state.next
 
-            if self.next_state == "load_screen":
-                self.state_dict = {
-                    "load_screen": LoadScreen()
-                }
-            elif self.next_state == "infinite_mode":
-                self.state_dict = {
-                    "infinite_mode": InfiniteMode()
-                }
-
-            self.state.finished = False  # 重置当前状态完成标志
-            self.state = self.state_dict[self.next_state]  # 切换到下一个状态
+            if self.next_state == "infinite_mode":
+                self.state = InfiniteMode()
+                self.state.finished = False
 
         self.state.update(self.screen, self.keys)

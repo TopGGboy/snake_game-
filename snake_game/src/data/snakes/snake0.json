@@ -1,9 +1,0 @@
-{
-  "head_size": 48,
-  "body_size": 86,
-  "move_speed": 20,
-  "move_delay": 300,
-  "initial_body_segments": 5,
-  "collision_threshold_ratio": 0.2,
-  "description": "默认蛇的配置"
-}
