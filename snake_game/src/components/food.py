@@ -57,7 +57,7 @@ class Food(pygame.sprite.Sprite):
             avoid_positions = []
 
         max_attempts = 100
-        margin = GameBalance.FOOD_GENERATION_MARGIN
+        margin = GameBalance.FOOD_GENERATION_PIXEL
 
         # 计算有效生成区域（考虑食物大小和边距）
         min_x = margin + self.collision_radius
@@ -133,14 +133,6 @@ class Food(pygame.sprite.Sprite):
                     print(f"⚠️  接近但未碰撞: 距离={distance:.2f}, 阈值={collision_threshold:.2f}")
 
         return is_collision
-
-    def check_collision_rect(self, snake_head_rect: pygame.Rect) -> bool:
-        """
-        兼容性方法：使用矩形碰撞检测（为了向后兼容）
-        :param snake_head_rect: 蛇头的矩形
-        :return: 是否发生碰撞
-        """
-        return self.rect.colliderect(snake_head_rect)
 
     def get_eaten(self) -> int:
         """
@@ -224,15 +216,6 @@ class FoodManager:
             collision_detected = False
             if snake_head_pos:
                 collision_detected = food.check_collision(snake_head_pos)
-
-                # 双重检测：如果圆形碰撞检测失败，尝试矩形碰撞作为备用
-                if not collision_detected and snake_head_rect:
-                    collision_detected = food.check_collision_rect(snake_head_rect)
-                    if collision_detected:
-                        print("备用矩形碰撞检测触发")
-            elif snake_head_rect:
-                # 向后兼容：只有矩形碰撞
-                collision_detected = food.check_collision_rect(snake_head_rect)
 
             if collision_detected and not food.is_eaten:  # 确保食物没有被重复吃掉
                 score_gained += food.get_eaten()

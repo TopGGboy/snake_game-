@@ -17,7 +17,7 @@ class GameBalance:
     FOOD_SIZE = 30  # 食物尺寸
     FOOD_SCORE_VALUE = 10  # 食物分数
     MAX_FOOD_COUNT = 1  # 同时存在的食物数量
-    FOOD_GENERATION_MARGIN = 2  # 食物生成时的边缘留白网格数
+    FOOD_GENERATION_PIXEL = 8  # 食物生成时的边缘留白网格数
 
     # 蛇的初始配置
     INITIAL_BODY_SEGMENTS = 3  # 初始身体段数
