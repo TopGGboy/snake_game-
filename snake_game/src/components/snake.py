@@ -360,18 +360,30 @@ class Snake(pygame.sprite.Sprite):
         """获取蛇的长度（包括头部）"""
         return len(self.body_segments) + 1
 
-    def draw(self, surface: pygame.Surface) -> None:
+    def draw(self, surface: pygame.Surface, debug_collision: bool = False) -> None:
         """绘制蛇"""
         # 绘制身体段
         for segment in self.body_segments:
             body_rect = self.body_image.get_rect()
             body_rect.center = (int(segment[0]), int(segment[1]))
             surface.blit(self.body_image, body_rect)
+            
+            # 调试：绘制身体段碰撞圆圈
+            if debug_collision:
+                pygame.draw.circle(surface, (0, 255, 255), 
+                                 (int(segment[0]), int(segment[1])), 
+                                 int(self.config.collision_radius), 2)
 
         # 绘制头部
         head_rect = self.head_image.get_rect()
         head_rect.center = (int(self.position[0]), int(self.position[1]))
         surface.blit(self.head_image, head_rect)
+        
+        # 调试：绘制蛇头碰撞圆圈
+        if debug_collision:
+            pygame.draw.circle(surface, (255, 0, 0), 
+                             (int(self.position[0]), int(self.position[1])), 
+                             int(self.config.collision_radius), 3)
 
     def reset(self, initial_pos: Tuple[int, int] = (400, 300)) -> None:
         """重置蛇到初始状态"""

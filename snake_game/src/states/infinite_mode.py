@@ -55,6 +55,9 @@ class InfiniteMode:
         # 游戏状态
         self.game_over = False
         self.paused = False
+        
+        # 调试选项
+        self.debug_collision = False  # 是否显示碰撞区域
 
         print("无尽模式初始化完成")
 
@@ -123,6 +126,11 @@ class InfiniteMode:
             self.dynamic_speed = not self.dynamic_speed
             print(f"动态速度调整: {'开启' if self.dynamic_speed else '关闭'}")
 
+        # F3 切换碰撞区域调试显示
+        if keys[pygame.K_F3]:
+            self.debug_collision = not self.debug_collision
+            print(f"碰撞区域调试: {'开启' if self.debug_collision else '关闭'}")
+
         # R 重新开始游戏
         if keys[pygame.K_r] and self.game_over:
             self.restart_game()
@@ -157,11 +165,11 @@ class InfiniteMode:
         # 绘制网格（可选）
         self._draw_grid(surface, colors['grid'])
 
-        # 绘制食物
-        self.food_manager.draw(surface)
+        # 绘制食物（带碰撞调试）
+        self.food_manager.draw(surface, self.debug_collision)
 
-        # 绘制蛇
-        self.snake.draw(surface)
+        # 绘制蛇（带碰撞调试）
+        self.snake.draw(surface, self.debug_collision)
 
         # 绘制UI
         self._draw_ui(surface, colors['text'])
@@ -211,7 +219,8 @@ class InfiniteMode:
         # 绘制控制提示
         help_texts = [
             "F1: 性能监控",
-            "F2: 动态速度",
+            "F2: 动态速度", 
+            "F3: 碰撞调试",
             "方向键: 移动"
         ]
 
