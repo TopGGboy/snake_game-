@@ -32,6 +32,9 @@ class SnakeConfig:
         self.max_turn_angle = GameBalance.SMOOTH_MAX_TURN_ANGLE  # 每秒最大转向角度
         self.smooth_turning = GameBalance.SMOOTH_TURNING_ENABLED  # 启用平滑转向
 
+        # 加速配置
+        self.boost_multiplier = GameBalance.SMOOTH_BOOST_MULTIPLIER
+
 
 class Snake(pygame.sprite.Sprite):
     """优化后的蛇类"""
@@ -95,6 +98,12 @@ class Snake(pygame.sprite.Sprite):
         self.velocity = [0.0, 0.0]  # [vx, vy]
         self.is_moving = False  # 是否开始移动
 
+        # 加速功能
+        self.is_boosting = False  # 是否正在加速
+        self.boost_multiplier = self.config.boost_multiplier  # 加速倍数
+        self.normal_speed = self.config.move_speed  # 保存正常速度
+        self.boost_speed = self.normal_speed * self.boost_multiplier  # 加速后的速度
+
         # 设置头部图片和rect（初始朝右，即0度）
         self.head_image = self.angle_images[0]
         self.rect = self.head_image.get_rect()
@@ -121,11 +130,11 @@ class Snake(pygame.sprite.Sprite):
         self.total_path_length = 0.0
 
     def handle_input(self, keys: pygame.key.ScancodeWrapper) -> None:
-        """处理键盘输入 - 支持连续方向控制"""
+        """处理键盘输入 - 支持连续方向控制和加速"""
         # 重置输入方向
         self.input_direction = [0, 0]
 
-        # 检查按键状态
+        # 检查方向按键状态
         if keys[pygame.K_LEFT] or keys[pygame.K_a]:
             self.input_direction[0] -= 1
         if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
@@ -135,9 +144,11 @@ class Snake(pygame.sprite.Sprite):
         if keys[pygame.K_DOWN] or keys[pygame.K_s]:
             self.input_direction[1] += 1
 
+        # 检查加速按键（空格键）
+        self.is_boosting = keys[pygame.K_SPACE]
+
         # 计算目标角度并开始移动
         if self.input_direction[0] != 0 or self.input_direction[1] != 0:
-            import math
             self.target_angle = math.degrees(math.atan2(self.input_direction[1], self.input_direction[0]))
             self.is_moving = True  # 开始移动
 
@@ -188,11 +199,11 @@ class Snake(pygame.sprite.Sprite):
         self.angle = self._normalize_angle(self.angle)
 
         # 数学原理： 使用三角函数将极坐标（角度+速度）转换为直角坐标（vx, vy）。
-        # 2. 计算速度向量
-        angle_rad = math.radians(self.angle)
-        speed = self.config.move_speed
-        self.velocity[0] = math.cos(angle_rad) * speed
-        self.velocity[1] = math.sin(angle_rad) * speed
+        # 2. 计算速度向量（根据加速状态调整速度）
+        angle_rad = math.radians(self.angle)  # 将角度转换为弧度
+        speed = self.boost_speed if self.is_boosting else self.normal_speed  # 根据加速状态调整速度
+        self.velocity[0] = math.cos(angle_rad) * speed  # 计算x轴速度
+        self.velocity[1] = math.sin(angle_rad) * speed  # 计算y轴速度
 
         # 3. 更新位置
         old_position = self.position.copy()
@@ -360,6 +371,14 @@ class Snake(pygame.sprite.Sprite):
         """获取蛇的长度（包括头部）"""
         return len(self.body_segments) + 1
 
+    def is_boost_active(self) -> bool:
+        """获取当前是否正在加速"""
+        return self.is_boosting
+
+    def get_current_speed(self) -> float:
+        """获取当前移动速度"""
+        return self.boost_speed if self.is_boosting else self.normal_speed
+
     def draw(self, surface: pygame.Surface, debug_collision: bool = False) -> None:
         """绘制蛇"""
         # 绘制身体段
@@ -378,6 +397,17 @@ class Snake(pygame.sprite.Sprite):
         head_rect = self.head_image.get_rect()
         head_rect.center = (int(self.position[0]), int(self.position[1]))
         surface.blit(self.head_image, head_rect)
+
+        # 加速状态视觉反馈：在蛇头周围绘制光环效果
+        if self.is_boosting and self.is_moving:
+            # 绘制加速光环（黄色圆圈）
+            pygame.draw.circle(surface, (255, 255, 0),
+                               (int(self.position[0]), int(self.position[1])),
+                               int(self.config.collision_radius + 8), 3)
+            # 绘制内圈光环（橙色）
+            pygame.draw.circle(surface, (255, 165, 0),
+                               (int(self.position[0]), int(self.position[1])),
+                               int(self.config.collision_radius + 4), 2)
 
         # 调试：绘制蛇头碰撞圆圈
         if debug_collision:

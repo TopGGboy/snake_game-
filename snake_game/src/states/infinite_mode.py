@@ -219,9 +219,14 @@ class InfiniteMode:
         surface.blit(length_text, (10, 90))
 
         # 绘制速度信息
-        if self.dynamic_speed:
-            speed_text = self.font_manager.render_text(f"速度: {self.snake.config.move_delay}ms", 'medium', text_color)
-            surface.blit(speed_text, (10, 130))
+        current_speed = self.snake.get_current_speed()
+        speed_text = self.font_manager.render_text(f"速度: {current_speed:.0f}", 'medium', text_color)
+        surface.blit(speed_text, (10, 130))
+
+        # 绘制加速状态
+        if self.snake.is_boost_active():
+            boost_text = self.font_manager.render_text("🚀 加速中", 'medium', (255, 255, 0))
+            surface.blit(boost_text, (10, 160))
 
         # 绘制控制提示
         help_texts = [
@@ -229,7 +234,8 @@ class InfiniteMode:
             "F2: 动态速度", 
             "F3: 碰撞调试",
             "F4: 碰撞日志",
-            "方向键: 移动"
+            "方向键: 移动",
+            "空格键: 加速"
         ]
 
         for i, text in enumerate(help_texts):

@@ -31,6 +31,8 @@ class GameBalance:
     SMOOTH_MAX_TURN_ANGLE = 90.0  # 每秒最大转向角度
     SMOOTH_TURNING_ENABLED = True  # 启用平滑转向
 
+    SMOOTH_BOOST_MULTIPLIER = 2.0  # 加速倍数
+
     # 游戏难度配置
     DIFFICULTY_LEVELS = {
         'easy': {
