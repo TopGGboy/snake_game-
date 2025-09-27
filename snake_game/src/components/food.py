@@ -15,6 +15,9 @@ from ..utils.image_manager import get_image_manager
 class Food(pygame.sprite.Sprite):
     """食物类 - 针对顺滑移动优化"""
 
+    # 类级别的调试开关
+    DEBUG_COLLISION = False
+
     def __init__(self, food_name: str = "food0", size: int = None):
         pygame.sprite.Sprite.__init__(self)
         self.food_name = food_name
@@ -26,7 +29,8 @@ class Food(pygame.sprite.Sprite):
         self.is_eaten = False
 
         # 碰撞检测半径（圆形碰撞，更适合顺滑移动）
-        self.collision_radius = self.size // 2
+        # 使用稍微大一点的碰撞半径，提高碰撞检测的容错性
+        self.collision_radius = self.size * 0.5  # 比图片半径稍大
 
         # 加载食物图片
         self._load_image()
@@ -114,7 +118,21 @@ class Food(pygame.sprite.Sprite):
             snake_head_radius = GameBalance.SMOOTH_COLLISION_RADIUS
 
         distance = self._calculate_distance(self.position, snake_head_pos)
-        return distance < (self.collision_radius + snake_head_radius)
+        collision_threshold = self.collision_radius + snake_head_radius
+
+        # 调试信息
+        is_collision = distance <= collision_threshold
+        if Food.DEBUG_COLLISION:
+            if is_collision:
+                print(f"✅ 碰撞检测成功: 距离={distance:.2f}, 阈值={collision_threshold:.2f}")
+                print(
+                    f"   食物位置=({self.position[0]:.1f}, {self.position[1]:.1f}), 蛇头位置=({snake_head_pos[0]:.1f}, {snake_head_pos[1]:.1f})")
+            else:
+                # 只在距离很近但没有碰撞时输出调试信息
+                if distance < collision_threshold * 1.5:
+                    print(f"⚠️  接近但未碰撞: 距离={distance:.2f}, 阈值={collision_threshold:.2f}")
+
+        return is_collision
 
     def check_collision_rect(self, snake_head_rect: pygame.Rect) -> bool:
         """
@@ -197,23 +215,33 @@ class FoodManager:
         score_gained = 0
 
         for food in self.foods:
+            if food.is_eaten:  # 跳过已经被吃掉的食物
+                continue
+
             food.update(dt)
 
-            # 优先使用圆形碰撞检测
+            # 使用圆形碰撞检测（更精确）
             collision_detected = False
             if snake_head_pos:
                 collision_detected = food.check_collision(snake_head_pos)
+
+                # 双重检测：如果圆形碰撞检测失败，尝试矩形碰撞作为备用
+                if not collision_detected and snake_head_rect:
+                    collision_detected = food.check_collision_rect(snake_head_rect)
+                    if collision_detected:
+                        print("备用矩形碰撞检测触发")
             elif snake_head_rect:
-                # 向后兼容
+                # 向后兼容：只有矩形碰撞
                 collision_detected = food.check_collision_rect(snake_head_rect)
 
-            if collision_detected:
+            if collision_detected and not food.is_eaten:  # 确保食物没有被重复吃掉
                 score_gained += food.get_eaten()
                 self.score += score_gained
 
                 # 重新生成食物位置，避开蛇的所有部分
                 avoid_positions = snake_body_positions.copy()
-                avoid_positions.append(snake_head_pos)
+                if snake_head_pos:
+                    avoid_positions.append(snake_head_pos)
                 food.reset(avoid_positions)
 
                 print(f"吃到食物！获得 {food.score_value} 分，总分: {self.score}")

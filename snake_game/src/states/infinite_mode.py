@@ -92,8 +92,9 @@ class InfiniteMode:
             self.snake.update(dt)
 
             # 更新食物并检查食物碰撞
-            snake_body_positions = [(int(seg[0]), int(seg[1])) for seg in self.snake.body_segments]
-            score_gained = self.food_manager.update(dt, self.snake.rect, snake_body_positions)
+            snake_head_pos = (self.snake.position[0], self.snake.position[1])  # 蛇头浮点坐标
+            snake_body_positions = [(seg[0], seg[1]) for seg in self.snake.body_segments]  # 身体浮点坐标
+            score_gained = self.food_manager.update(dt, snake_head_pos, snake_body_positions, self.snake.rect)  # 获取得分
 
             # 如果吃到食物，蛇增长
             if score_gained > 0:
@@ -130,6 +131,12 @@ class InfiniteMode:
         if keys[pygame.K_F3]:
             self.debug_collision = not self.debug_collision
             print(f"碰撞区域调试: {'开启' if self.debug_collision else '关闭'}")
+
+        # F4 切换碰撞检测调试日志
+        if keys[pygame.K_F4]:
+            from src.components.food import Food
+            Food.DEBUG_COLLISION = not Food.DEBUG_COLLISION
+            print(f"碰撞检测调试日志: {'开启' if Food.DEBUG_COLLISION else '关闭'}")
 
         # R 重新开始游戏
         if keys[pygame.K_r] and self.game_over:
@@ -221,6 +228,7 @@ class InfiniteMode:
             "F1: 性能监控",
             "F2: 动态速度", 
             "F3: 碰撞调试",
+            "F4: 碰撞日志",
             "方向键: 移动"
         ]
 
