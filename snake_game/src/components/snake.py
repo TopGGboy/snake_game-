@@ -65,13 +65,14 @@ class Snake(pygame.sprite.Sprite):
 
         # 获取头部和身体图片（图片应该已经在游戏初始化时预加载了）
         original_head = manager.get_snake_head(self.name, self.config.head_size)
-        self.body_image = manager.get_snake_body(self.name, self.config.body_size)
+        # self.body_image = manager.get_snake_body(self.name, self.config.body_size)
+        self.body_image = ''
 
         if original_head is None or self.body_image is None:
             print(f"警告: 无法加载蛇 {self.name} 的图片，使用默认图片")
             # 使用备用方案
             original_head = tools.create_default_image(self.config.head_size, (0, 255, 0))
-            self.body_image = tools.create_default_image(self.config.body_size, (0, 200, 0))
+            # self.body_image = tools.create_default_image(self.config.body_size, (0, 200, 0))
 
         # 创建角度图片缓存（每15度一个，统一的图片系统）
         # 原始图片朝左（180度），所以需要调整旋转角度
@@ -82,7 +83,7 @@ class Snake(pygame.sprite.Sprite):
             rotated_image = pygame.transform.rotate(original_head, rotation_angle)
             self.angle_images[angle] = rotated_image
 
-        print(f"图片加载完成 - 头部: {original_head.get_size()}, 身体: {self.body_image.get_size()}")
+        print(f"图片加载完成 - 头部: {original_head.get_size()}")
         print(f"角度图片: {len(self.angle_images)}个 (每15度)")
 
     def _setup_initial_state(self, initial_pos: Tuple[int, int]) -> None:
@@ -103,6 +104,28 @@ class Snake(pygame.sprite.Sprite):
         self.boost_multiplier = self.config.boost_multiplier  # 加速倍数
         self.normal_speed = self.config.move_speed  # 保存正常速度
         self.boost_speed = self.normal_speed * self.boost_multiplier  # 加速后的速度
+
+        # 蛇身颜色配置
+        self.body_colors = {
+            'normal': {
+                'fill': (255, 215, 0),  # 金黄色（如图片）
+                'border': (218, 165, 32),  # 深金色边框
+                'highlight': (255, 255, 224)  # 浅黄高光
+            },
+            'boost': {
+                'fill': (255, 215, 0),  # 金黄色
+                'border': (255, 140, 0),  # 深橙色边框
+                'highlight': (255, 255, 224)  # 浅黄高光
+            }
+        }
+        self.body_radius = self.config.body_size // 2  # 蛇身圆圈半径
+
+        # 动画效果
+        self.animation_time = 0.0  # 动画时间计数器
+        self.pulse_speed = 3.0  # 脉动速度
+
+        # 渲染选项 - 简化为固定大小
+        self.use_connections = True  # 是否绘制连接线段
 
         # 设置头部图片和rect（初始朝右，即0度）
         self.head_image = self.angle_images[0]
@@ -171,6 +194,10 @@ class Snake(pygame.sprite.Sprite):
             return
 
         dt_seconds = dt / 1000.0
+
+        # 更新动画时间
+        self.animation_time += dt_seconds
+
         self._update_smooth_movement(dt_seconds)
 
     def _update_smooth_movement(self, dt_seconds: float) -> None:
@@ -252,26 +279,25 @@ class Snake(pygame.sprite.Sprite):
         self.head_image = self.angle_images[closest_angle]
 
     def _update_body_segments_smooth(self) -> None:
-        """更新身体段位置（完全顺滑模式）"""
+        """更新身体段位置（完全顺滑模式）- 优化连续性"""
         if not self.body_segments:
             return
 
         # 如果路径点不足，使用简单跟随
         if len(self.path_points) < 2:
-            # 简单的直线跟随
+            # 简单的直线跟随 - 使用更紧密的间距
             for i, segment in enumerate(self.body_segments):
-                distance = (i + 1) * self.config.segment_distance
-                # 计算反向方向
-                import math
+                # 使用稍小的间距确保连续性
+                distance = (i + 1) * (self.body_radius * 1.6)  # 约1.6倍半径的间距
                 angle_rad = math.radians(self.angle + 180)  # 反向
                 segment[0] = self.position[0] + math.cos(angle_rad) * distance
                 segment[1] = self.position[1] + math.sin(angle_rad) * distance
             return
 
-        # 为每个身体段计算在路径上的位置
+        # 为每个身体段计算在路径上的位置 - 使用优化的间距
         for i, segment in enumerate(self.body_segments):
-            # 计算该段应该距离头部的距离
-            target_distance = (i + 1) * self.config.segment_distance
+            # 使用更紧密的间距确保连续性
+            target_distance = (i + 1) * (self.body_radius * 1.6)
 
             # 在路径上找到对应距离的位置
             segment_pos = self._get_position_on_path(target_distance)
@@ -379,35 +405,98 @@ class Snake(pygame.sprite.Sprite):
         """获取当前移动速度"""
         return self.boost_speed if self.is_boosting else self.normal_speed
 
+    def _draw_connection(self, surface: pygame.Surface, pos1: Tuple[int, int],
+                         pos2: Tuple[int, int], colors: dict, radius: int) -> None:
+        """绘制两个身体段之间的连接"""
+        # 计算两点之间的距离
+        dx = pos2[0] - pos1[0]
+        dy = pos2[1] - pos1[1]
+        distance = math.sqrt(dx * dx + dy * dy)
+
+        # 如果距离很小，不需要连接
+        if distance < radius * 1.5:
+            return
+
+        # 计算连接矩形的参数
+        if distance > 0:
+            # 单位向量
+            ux = dx / distance
+            uy = dy / distance
+
+            # 垂直向量
+            vx = -uy * radius * 0.8  # 稍微细一点
+            vy = ux * radius * 0.8
+
+            # 矩形的四个顶点
+            points = [
+                (pos1[0] + vx, pos1[1] + vy),
+                (pos1[0] - vx, pos1[1] - vy),
+                (pos2[0] - vx, pos2[1] - vy),
+                (pos2[0] + vx, pos2[1] + vy)
+            ]
+
+            # 绘制连接矩形
+            pygame.draw.polygon(surface, colors['fill'], points)
+
+    def _draw_body_circle(self, surface: pygame.Surface, pos: Tuple[int, int],
+                          colors: dict, radius: int, segment_index: int = 0) -> None:
+        """绘制圆形蛇身段"""
+        # 加速状态下的脉动效果
+        if self.is_boosting:
+            pulse_factor = 1.0 + 0.1 * math.sin(self.animation_time * self.pulse_speed + segment_index * 0.3)
+            radius = int(radius * pulse_factor)
+
+        # 绘制阴影效果
+        shadow_pos = (pos[0] + 2, pos[1] + 2)
+        pygame.draw.circle(surface, (0, 0, 0, 100), shadow_pos, radius)
+
+        # 绘制主体圆圈
+        pygame.draw.circle(surface, colors['fill'], pos, radius)
+
+        # 绘制边框
+        pygame.draw.circle(surface, colors['border'], pos, radius, 2)
+
+        # 绘制高光效果（左上角小圆圈）
+        highlight_pos = (pos[0] - radius // 3, pos[1] - radius // 3)
+        highlight_radius = max(radius // 4, 2)
+        pygame.draw.circle(surface, colors['highlight'], highlight_pos, highlight_radius)
+
+        # 加速状态下的额外光环效果
+        if self.is_boosting:
+            # 外圈光环
+            glow_radius = radius + 4
+            glow_color = (255, 255, 0, 80)  # 半透明黄色
+            pygame.draw.circle(surface, glow_color[:3], pos, glow_radius, 1)
+
     def draw(self, surface: pygame.Surface, debug_collision: bool = False) -> None:
         """绘制蛇"""
-        # 绘制身体段
-        for segment in self.body_segments:
-            body_rect = self.body_image.get_rect()
-            body_rect.center = (int(segment[0]), int(segment[1]))
-            surface.blit(self.body_image, body_rect)
+        # 根据加速状态选择颜色
+        colors = self.body_colors['boost'] if self.is_boosting else self.body_colors['normal']
+
+        # 绘制身体段（圆形）- 固定大小确保连续性
+        for i, segment in enumerate(self.body_segments):
+            pos = (int(segment[0]), int(segment[1]))
+
+            # 使用统一大小确保完美连续性
+            radius = self.body_radius
+
+            # 绘制连接线段（在圆圈之前绘制，避免覆盖）
+            if self.use_connections and i > 0:
+                prev_pos = (int(self.body_segments[i - 1][0]), int(self.body_segments[i - 1][1]))
+                self._draw_connection(surface, prev_pos, pos, colors, radius)
+
+            # 绘制圆形身体段
+            self._draw_body_circle(surface, pos, colors, radius, i)
 
             # 调试：绘制身体段碰撞圆圈
             if debug_collision:
-                pygame.draw.circle(surface, (0, 255, 255),
-                                   (int(segment[0]), int(segment[1])),
+                pygame.draw.circle(surface, (0, 255, 255), pos,
                                    int(self.config.collision_radius), 2)
 
         # 绘制头部
         head_rect = self.head_image.get_rect()
         head_rect.center = (int(self.position[0]), int(self.position[1]))
         surface.blit(self.head_image, head_rect)
-
-        # 加速状态视觉反馈：在蛇头周围绘制光环效果
-        if self.is_boosting and self.is_moving:
-            # 绘制加速光环（黄色圆圈）
-            pygame.draw.circle(surface, (255, 255, 0),
-                               (int(self.position[0]), int(self.position[1])),
-                               int(self.config.collision_radius + 8), 3)
-            # 绘制内圈光环（橙色）
-            pygame.draw.circle(surface, (255, 165, 0),
-                               (int(self.position[0]), int(self.position[1])),
-                               int(self.config.collision_radius + 4), 2)
 
         # 调试：绘制蛇头碰撞圆圈
         if debug_collision:
@@ -419,4 +508,5 @@ class Snake(pygame.sprite.Sprite):
         """重置蛇到初始状态"""
         self._setup_initial_state(initial_pos)
         self._setup_body_segments()
+        self.animation_time = 0.0  # 重置动画时间
         print(f"蛇 {self.name} 已重置到位置: {initial_pos}")
