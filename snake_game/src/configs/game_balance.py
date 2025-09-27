@@ -12,12 +12,6 @@ class GameBalance:
 
     # 移动和网格配置
     GRID_SIZE = 20
-    SNAKE_MOVE_SPEED = 20  # 每次移动的像素数，与网格大小一致
-    SNAKE_MOVE_DELAY = 300  # 移动间隔（毫秒）
-
-    # 碰撞检测配置
-    COLLISION_THRESHOLD = GRID_SIZE // 2  # 碰撞检测阈值
-    SELF_COLLISION_SEGMENTS_SKIP = 1  # 自碰撞检测时跳过的身体段数
 
     # 食物配置
     FOOD_SIZE = 30  # 食物尺寸
@@ -28,6 +22,14 @@ class GameBalance:
     # 蛇的初始配置
     INITIAL_BODY_SEGMENTS = 3  # 初始身体段数
     INITIAL_POSITION = (400, 300)  # 初始位置
+
+    # 顺滑移动配置
+    SMOOTH_MOVE_SPEED = 120.0  # 像素/秒 - 蛇的移动速度
+    SMOOTH_TURN_SPEED = 180.0  # 度/秒 - 转向速度
+    SMOOTH_SEGMENT_DISTANCE = 20.0  # 身体段之间的距离
+    SMOOTH_COLLISION_RADIUS = 12.0  # 碰撞检测半径
+    SMOOTH_MAX_TURN_ANGLE = 90.0  # 每秒最大转向角度
+    SMOOTH_TURNING_ENABLED = True  # 启用平滑转向
 
     # 游戏难度配置
     DIFFICULTY_LEVELS = {

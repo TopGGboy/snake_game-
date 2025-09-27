@@ -7,18 +7,12 @@ from typing import List, Tuple, Optional
 from enum import Enum
 
 import pygame
+import math
 from ..utils import tools
 from ..utils.grid_utils import GridUtils
 from ..configs.config import Config
 from ..configs.game_balance import GameBalance
-
-
-class Direction(Enum):
-    """方向枚举"""
-    UP = "U"
-    DOWN = "D"
-    LEFT = "L"
-    RIGHT = "R"
+from ..utils.image_manager import get_image_manager
 
 
 class SnakeConfig:
@@ -26,19 +20,17 @@ class SnakeConfig:
 
     def __init__(self):
         # 基础配置
-        self.head_size = GameBalance.SNAKE_HEAD_SIZE
-        self.body_size = GameBalance.SNAKE_BODY_SIZE
-        self.initial_body_segments = GameBalance.INITIAL_BODY_SEGMENTS
+        self.head_size = GameBalance.SNAKE_HEAD_SIZE  # 蛇的尺寸
+        self.body_size = GameBalance.SNAKE_BODY_SIZE  # 蛇身体段的尺寸
+        self.initial_body_segments = GameBalance.INITIAL_BODY_SEGMENTS  # 蛇的初始身体段数
 
-        # 完全顺滑移动配置
-        self.move_speed = 120.0  # 像素/秒 - 蛇的移动速度
-        self.turn_speed = 180.0  # 度/秒 - 转向速度
-        self.segment_distance = 20.0  # 身体段之间的距离
-        self.collision_radius = 12.0  # 碰撞检测半径
-
-        # 控制响应性
-        self.max_turn_angle = 90.0  # 每秒最大转向角度
-        self.smooth_turning = True  # 启用平滑转向
+        # 完全顺滑移动配置 - 从GameBalance获取
+        self.move_speed = GameBalance.SMOOTH_MOVE_SPEED  # 蛇的移动速度
+        self.turn_speed = GameBalance.SMOOTH_TURN_SPEED  # 蛇的转向速度
+        self.segment_distance = GameBalance.SMOOTH_SEGMENT_DISTANCE  # 身体段之间的距离
+        self.collision_radius = GameBalance.SMOOTH_COLLISION_RADIUS  # 碰撞检测半径
+        self.max_turn_angle = GameBalance.SMOOTH_MAX_TURN_ANGLE  # 每秒最大转向角度
+        self.smooth_turning = GameBalance.SMOOTH_TURNING_ENABLED  # 启用平滑转向
 
 
 class Snake(pygame.sprite.Sprite):
@@ -65,9 +57,7 @@ class Snake(pygame.sprite.Sprite):
         return SnakeConfig()
 
     def _load_images(self) -> None:
-        """加载并预处理所有方向的图片"""
-        from ..utils.image_manager import get_image_manager
-
+        """加载并预处理所有方向的图"""
         manager = get_image_manager()
 
         # 获取头部和身体图片（图片应该已经在游戏初始化时预加载了）
@@ -80,15 +70,17 @@ class Snake(pygame.sprite.Sprite):
             original_head = tools.create_default_image(self.config.head_size, (0, 255, 0))
             self.body_image = tools.create_default_image(self.config.body_size, (0, 200, 0))
 
-        # 预加载所有方向的头部图片
-        self.head_images = {
-            Direction.LEFT: original_head,
-            Direction.RIGHT: pygame.transform.rotate(original_head, 180),
-            Direction.UP: pygame.transform.rotate(original_head, -90),
-            Direction.DOWN: pygame.transform.rotate(original_head, 90)
-        }
+        # 创建角度图片缓存（每15度一个，统一的图片系统）
+        # 原始图片朝左（180度），所以需要调整旋转角度
+        self.angle_images = {}
+        for angle in range(0, 360, 15):  # 每15度创建一个图片
+            # 原始图片是180度（朝左），所以实际旋转角度需要减去180度
+            rotation_angle = -(angle - 180)
+            rotated_image = pygame.transform.rotate(original_head, rotation_angle)
+            self.angle_images[angle] = rotated_image
 
         print(f"图片加载完成 - 头部: {original_head.get_size()}, 身体: {self.body_image.get_size()}")
+        print(f"角度图片: {len(self.angle_images)}个 (每15度)")
 
     def _setup_initial_state(self, initial_pos: Tuple[int, int]) -> None:
         """设置初始状态"""
@@ -103,8 +95,8 @@ class Snake(pygame.sprite.Sprite):
         self.velocity = [0.0, 0.0]  # [vx, vy]
         self.is_moving = False  # 是否开始移动
 
-        # 设置头部图片和rect
-        self.head_image = self.head_images[Direction.RIGHT]
+        # 设置头部图片和rect（初始朝右，即0度）
+        self.head_image = self.angle_images[0]
         self.rect = self.head_image.get_rect()
         self.rect.center = (int(self.position[0]), int(self.position[1]))
 
@@ -172,19 +164,18 @@ class Snake(pygame.sprite.Sprite):
 
     def _update_smooth_movement(self, dt_seconds: float) -> None:
         """更新完全顺滑的移动"""
-        import math
-
         # 只有在开始移动后才更新
         if not self.is_moving:
             return
 
         # 1. 更新角度（平滑转向）
         if self.config.smooth_turning:
-            angle_diff = self._get_angle_difference(self.target_angle, self.angle)
-            max_turn = self.config.turn_speed * dt_seconds
+            # 物理模拟： 真实世界中物体不能瞬间改变方向，这里模拟了转向惯性。
+            angle_diff = self._get_angle_difference(self.target_angle, self.angle)  # 角度差
+            max_turn = self.config.turn_speed * dt_seconds  # 转向速度限制
 
             if abs(angle_diff) > max_turn:
-                # 限制转向速度
+                # 渐进式转向，不能瞬间转向
                 turn_direction = 1 if angle_diff > 0 else -1
                 self.angle += turn_direction * max_turn
             else:
@@ -196,6 +187,7 @@ class Snake(pygame.sprite.Sprite):
         # 标准化角度
         self.angle = self._normalize_angle(self.angle)
 
+        # 数学原理： 使用三角函数将极坐标（角度+速度）转换为直角坐标（vx, vy）。
         # 2. 计算速度向量
         angle_rad = math.radians(self.angle)
         speed = self.config.move_speed
@@ -241,19 +233,12 @@ class Snake(pygame.sprite.Sprite):
 
     def _update_head_image(self) -> None:
         """根据当前角度更新头部图片"""
-        # 根据角度选择最接近的方向
         normalized_angle = self.angle % 360
 
-        if -45 <= normalized_angle <= 45 or 315 <= normalized_angle <= 360:
-            direction = Direction.RIGHT
-        elif 45 < normalized_angle < 135:
-            direction = Direction.DOWN
-        elif 135 <= normalized_angle <= 225:
-            direction = Direction.LEFT
-        else:  # 225 < angle < 315
-            direction = Direction.UP
-
-        self.head_image = self.head_images[direction]
+        # 找到最接近的15度倍数角度
+        closest_angle = round(normalized_angle / 15) * 15
+        closest_angle = closest_angle % 360
+        self.head_image = self.angle_images[closest_angle]
 
     def _update_body_segments_smooth(self) -> None:
         """更新身体段位置（完全顺滑模式）"""
