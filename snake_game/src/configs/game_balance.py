@@ -5,30 +5,30 @@
 
 class GameBalance:
     """游戏平衡性参数配置"""
-    
+
     # 蛇的尺寸配置（经过调试优化）
     SNAKE_HEAD_SIZE = 40
     SNAKE_BODY_SIZE = 25
-    
+
     # 移动和网格配置
     GRID_SIZE = 20
     SNAKE_MOVE_SPEED = 20  # 每次移动的像素数，与网格大小一致
     SNAKE_MOVE_DELAY = 300  # 移动间隔（毫秒）
-    
+
     # 碰撞检测配置
     COLLISION_THRESHOLD = GRID_SIZE // 2  # 碰撞检测阈值
     SELF_COLLISION_SEGMENTS_SKIP = 1  # 自碰撞检测时跳过的身体段数
-    
+
     # 食物配置
     FOOD_SIZE = 30  # 食物尺寸
     FOOD_SCORE_VALUE = 10  # 食物分数
     MAX_FOOD_COUNT = 1  # 同时存在的食物数量
     FOOD_GENERATION_MARGIN = 2  # 食物生成时的边缘留白网格数
-    
+
     # 蛇的初始配置
     INITIAL_BODY_SEGMENTS = 3  # 初始身体段数
     INITIAL_POSITION = (400, 300)  # 初始位置
-    
+
     # 游戏难度配置
     DIFFICULTY_LEVELS = {
         'easy': {
@@ -48,7 +48,7 @@ class GameBalance:
             'food_score': 20
         }
     }
-    
+
     @classmethod
     def get_difficulty_config(cls, difficulty: str = 'normal') -> dict:
         """
@@ -57,7 +57,7 @@ class GameBalance:
         :return: 难度配置字典
         """
         return cls.DIFFICULTY_LEVELS.get(difficulty, cls.DIFFICULTY_LEVELS['normal'])
-    
+
     @classmethod
     def calculate_speed_increase(cls, score: int) -> int:
         """
@@ -69,7 +69,7 @@ class GameBalance:
         speed_reduction = (score // 100) * 10
         new_delay = max(100, cls.SNAKE_MOVE_DELAY - speed_reduction)
         return new_delay
-    
+
     @classmethod
     def get_color_scheme(cls, theme: str = 'classic') -> dict:
         """

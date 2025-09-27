@@ -53,7 +53,8 @@ def normalize_to_standard_size(image, standard_size=64):
 
     original_width, original_height = image.get_size()
     max_dimension = max(original_width, original_height)
-    scale_factor = standard_size * 0.9 / max_dimension
+    # 使用更大的缩放比例，确保图片填满标准尺寸
+    scale_factor = standard_size * 0.95 / max_dimension
 
     new_width = int(original_width * scale_factor)
     new_height = int(original_height * scale_factor)
@@ -63,8 +64,16 @@ def normalize_to_standard_size(image, standard_size=64):
     standard_image = pygame.Surface((standard_size, standard_size), pygame.SRCALPHA)
     standard_image.fill((0, 0, 0, 0))
 
+    # 精确居中计算，确保像素级对齐
     x_offset = (standard_size - new_width) // 2
     y_offset = (standard_size - new_height) // 2
+
+    # 如果有奇数像素差，向上取整确保居中
+    if (standard_size - new_width) % 2 == 1:
+        x_offset += 1
+    if (standard_size - new_height) % 2 == 1:
+        y_offset += 1
+
     standard_image.blit(scaled_image, (x_offset, y_offset))
 
     return standard_image
