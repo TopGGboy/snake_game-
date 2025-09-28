@@ -13,7 +13,7 @@ class MainMenu:
         """
         self.config = Config.get_instance()
         self.finished = False
-        self.next = "infinite_mode"  # 直接进入游戏，不需要加载屏幕
+        self.next = "difficulty_selection"  # 先进入难度选择界面
 
         # 获取字体管理器
         self.font_manager = get_font_manager()

@@ -4,6 +4,7 @@
 import pygame
 from src.configs.config import Config
 from src.states.main_menu import MainMenu
+from src.states.difficulty_selection import DifficultySelection
 from src.states.infinite_mode import InfiniteMode
 
 
@@ -27,6 +28,7 @@ class Game:
         self.pause_flag = False  # 暂停状态
 
         self.return_home_flage = False  # 返回主菜单标志
+        self.selected_difficulty = None  # 存储选中的难度配置
 
     def run(self):
         """
@@ -76,8 +78,26 @@ class Game:
         if self.state.finished and self.return_home_flage == False:
             self.next_state = self.state.next
 
-            if self.next_state == "infinite_mode":
-                self.state = InfiniteMode()
+            if self.next_state == "main_menu":
+                # 返回主菜单
+                self.state = MainMenu()
                 self.state.finished = False
+                self.config.MAIN_MENU_FLAG = True
+                
+            elif self.next_state == "difficulty_selection":
+                # 进入难度选择
+                self.state = DifficultySelection()
+                self.state.finished = False
+                self.config.MAIN_MENU_FLAG = True  # 保持菜单模式用于键盘导航
+                
+            elif self.next_state == "infinite_mode":
+                # 进入无尽模式
+                # 如果来自难度选择，获取选中的难度配置
+                if hasattr(self.state, 'get_selected_difficulty'):
+                    self.selected_difficulty = self.state.get_selected_difficulty()
+                
+                self.state = InfiniteMode(self.selected_difficulty)
+                self.state.finished = False
+                self.config.MAIN_MENU_FLAG = False
 
         self.state.update(self.screen, self.keys)

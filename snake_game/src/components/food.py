@@ -134,6 +134,14 @@ class Food(pygame.sprite.Sprite):
 
         return is_collision
 
+    def check_collision_rect(self, snake_head_rect: pygame.Rect) -> bool:
+        """
+        兼容性方法：使用矩形碰撞检测（为了向后兼容）
+        :param snake_head_rect: 蛇头的矩形
+        :return: 是否发生碰撞
+        """
+        return self.rect.colliderect(snake_head_rect)
+
     def get_eaten(self) -> int:
         """
         食物被吃掉
@@ -216,7 +224,7 @@ class FoodManager:
             collision_detected = False
             if snake_head_pos:
                 collision_detected = food.check_collision(snake_head_pos)
-
+    
             if collision_detected and not food.is_eaten:  # 确保食物没有被重复吃掉
                 score_gained += food.get_eaten()
                 self.score += score_gained

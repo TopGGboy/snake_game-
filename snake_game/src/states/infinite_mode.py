@@ -1,6 +1,7 @@
 import pygame
 from src.components.snake import Snake
 from src.components.food import FoodManager
+from src.components.wall import WallManager
 from src.configs.config import Config
 from src.configs.game_balance import GameBalance
 from src.utils.image_manager import initialize_game_images
@@ -10,21 +11,37 @@ from src.utils.font_manager import get_font_manager
 
 
 class InfiniteMode:
-    def __init__(self):
+    def __init__(self, difficulty_config=None):
         """
         初始化无尽模式
+        :param difficulty_config: 难度配置字典
         """
         self.finished = False
         self.next = None
+
+        # 应用难度配置
+        self.difficulty_config = difficulty_config or {
+            'name': '困难模式',
+            'key': 'hard',
+            'speed': 120.0,
+            'walls': True,
+            'food_score': 10
+        }
 
         # 初始化图片管理器
         print("初始化图片管理器...")
         initialize_game_images()
 
         self.snake = Snake("snake0")  # 创建蛇实例
+
+        # 根据难度配置调整蛇的速度
+        self.snake.config.move_speed = self.difficulty_config['speed']
+        self.snake.normal_speed = self.difficulty_config['speed']  # 蛇的初始速度
+        self.snake.boost_speed = self.difficulty_config['speed'] * self.snake.config.boost_multiplier  # 蛇的加速速度
+
         # 设置蛇的初始位置到屏幕中心，确保网格对齐
-        initial_pos = GridUtils.align_to_grid(*GameBalance.INITIAL_POSITION)
-        self.snake.rect.center = initial_pos
+        initial_pos = GridUtils.align_to_grid(*GameBalance.INITIAL_POSITION)  # 获取网格对齐的初始位置
+        self.snake.rect.center = initial_pos  # 设置蛇的初始位置
         print(f"蛇初始位置设置为: {initial_pos}")
 
         # 获取屏幕尺寸
@@ -35,12 +52,20 @@ class InfiniteMode:
         # 创建食物管理器
         self.food_manager = FoodManager(max_food_count=GameBalance.MAX_FOOD_COUNT)
 
+        # 根据难度配置调整食物分数
+        for food in self.food_manager.foods:
+            food.score_value = self.difficulty_config['food_score']
+
+        # 创建墙管理器
+        self.wall_manager = WallManager()
+        self._setup_walls()
+
         # 游戏统计
         self.score = 0
         self.high_score = 0
 
         # 难度和速度管理
-        self.current_difficulty = 'normal'
+        self.current_difficulty = self.difficulty_config['key']
         self.dynamic_speed = False  # 是否启用动态速度调整
 
         # 时间管理
@@ -55,11 +80,27 @@ class InfiniteMode:
         # 游戏状态
         self.game_over = False
         self.paused = False
-        
+
         # 调试选项
         self.debug_collision = False  # 是否显示碰撞区域
 
-        print("无尽模式初始化完成")
+        print(f"无尽模式初始化完成 - 难度: {self.difficulty_config['name']}")
+
+    def _setup_walls(self):
+        """根据难度配置设置墙壁"""
+        if not self.difficulty_config.get('walls', False):
+            # 娱乐模式：无墙壁
+            return
+
+        if self.difficulty_config.get('maze', False):
+            # 噩梦模式：复杂迷宫
+            self.wall_manager.create_border_walls(margin=30)
+            self.wall_manager.create_maze_pattern()
+            print("创建了迷宫模式墙壁")
+        else:
+            # 困难模式：边界墙壁
+            self.wall_manager.create_border_walls(margin=30)
+            print("创建了边界墙壁")
 
     def update(self, surface, keys):
         """
@@ -94,7 +135,19 @@ class InfiniteMode:
             # 更新食物并检查食物碰撞
             snake_head_pos = (self.snake.position[0], self.snake.position[1])  # 蛇头浮点坐标
             snake_body_positions = [(seg[0], seg[1]) for seg in self.snake.body_segments]  # 身体浮点坐标
+
+            # 添加墙壁位置到避免列表
+            avoid_positions = snake_body_positions.copy()
+            avoid_positions.append(snake_head_pos)
+            avoid_positions.extend(self.wall_manager.get_wall_positions())
+
             score_gained = self.food_manager.update(dt, snake_head_pos, snake_body_positions, self.snake.rect)  # 获取得分
+
+            # 如果食物被重新生成，确保避开墙壁
+            for food in self.food_manager.foods:
+                if hasattr(food, '_needs_repositioning') and food._needs_repositioning:
+                    food.randomize_position(avoid_positions)
+                    food._needs_repositioning = False
 
             # 如果吃到食物，蛇增长
             if score_gained > 0:
@@ -153,12 +206,21 @@ class InfiniteMode:
             print(f"游戏结束：蛇撞到自己了！最终得分: {self.score}")
             return
 
-        # 检查是否撞到边界
-        if self.snake.check_boundary_collision(screen_width=self.screen_width, screen_height=self.screen_height):
+        # 检查是否撞到墙壁
+        snake_head_pos = (self.snake.position[0], self.snake.position[1])
+        if self.wall_manager.check_collision(snake_head_pos, self.snake.config.collision_radius):
             self.snake.is_dead = True
             self.game_over = True
-            print(f"游戏结束：蛇撞到边界了！最终得分: {self.score}")
+            print(f"游戏结束：蛇撞到墙壁了！最终得分: {self.score}")
             return
+
+        # 检查是否撞到边界（仅在娱乐模式下，因为其他模式有墙壁）
+        if not self.difficulty_config.get('walls', False):
+            if self.snake.check_boundary_collision(screen_width=self.screen_width, screen_height=self.screen_height):
+                self.snake.is_dead = True
+                self.game_over = True
+                print(f"游戏结束：蛇撞到边界了！最终得分: {self.score}")
+                return
 
     def draw(self, surface):
         """
@@ -171,6 +233,9 @@ class InfiniteMode:
 
         # 绘制网格（可选）
         self._draw_grid(surface, colors['grid'])
+
+        # 绘制墙壁（带碰撞调试）
+        self.wall_manager.draw(surface, self.debug_collision)
 
         # 绘制食物（带碰撞调试）
         self.food_manager.draw(surface, self.debug_collision)
@@ -218,20 +283,26 @@ class InfiniteMode:
         length_text = self.font_manager.render_text(f"长度: {self.snake.get_length()}", 'score', text_color)
         surface.blit(length_text, (10, 90))
 
+        # 绘制难度信息
+        difficulty_color = self._get_difficulty_color()
+        difficulty_text = self.font_manager.render_text(f"难度: {self.difficulty_config['name']}", 'medium',
+                                                        difficulty_color)
+        surface.blit(difficulty_text, (10, 130))
+
         # 绘制速度信息
         current_speed = self.snake.get_current_speed()
         speed_text = self.font_manager.render_text(f"速度: {current_speed:.0f}", 'medium', text_color)
-        surface.blit(speed_text, (10, 130))
+        surface.blit(speed_text, (10, 160))
 
         # 绘制加速状态
         if self.snake.is_boost_active():
             boost_text = self.font_manager.render_text("🚀 加速中", 'medium', (255, 255, 0))
-            surface.blit(boost_text, (10, 160))
+            surface.blit(boost_text, (10, 190))
 
         # 绘制控制提示
         help_texts = [
             "F1: 性能监控",
-            "F2: 动态速度", 
+            "F2: 动态速度",
             "F3: 碰撞调试",
             "F4: 碰撞日志",
             "方向键: 移动",
@@ -265,12 +336,35 @@ class InfiniteMode:
         restart_rect = restart_text.get_rect(center=(self.screen_width // 2, self.screen_height // 2 + 70))
         surface.blit(restart_text, restart_rect)
 
+    def _get_difficulty_color(self):
+        """根据难度获取颜色"""
+        difficulty_colors = {
+            'entertainment': (100, 255, 100),  # 绿色
+            'hard': (255, 255, 100),  # 黄色
+            'nightmare': (255, 100, 100)  # 红色
+        }
+        return difficulty_colors.get(self.difficulty_config['key'], (255, 255, 255))
+
     def restart_game(self):
         """重新开始游戏"""
         self.snake.reset(GridUtils.align_to_grid(*GameBalance.INITIAL_POSITION))
+
+        # 重新应用难度配置到蛇
+        self.snake.config.move_speed = self.difficulty_config['speed']
+        self.snake.normal_speed = self.difficulty_config['speed']
+        self.snake.boost_speed = self.difficulty_config['speed'] * self.snake.config.boost_multiplier
+
+        # 重置食物管理器并重新应用食物分数
         self.food_manager.reset()
+        for food in self.food_manager.foods:
+            food.score_value = self.difficulty_config['food_score']
+
+        # 重新设置墙壁
+        self.wall_manager.clear_walls()
+        self._setup_walls()
+
         self.score = 0
         self.game_over = False
         self.last_time = pygame.time.get_ticks()
         self.performance_monitor.reset_stats()
-        print("游戏重新开始")
+        print(f"游戏重新开始 - 难度: {self.difficulty_config['name']}")
