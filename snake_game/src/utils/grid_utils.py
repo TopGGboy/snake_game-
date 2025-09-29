@@ -2,13 +2,14 @@
 网格工具类 - 提供网格对齐和位置计算功能
 """
 from typing import Tuple, List
+from ..configs.game_balance import GameBalance
 
 
 class GridUtils:
     """网格工具类"""
-    
-    GRID_SIZE = 20  # 标准网格大小，与蛇的移动步长一致
-    
+
+    GRID_SIZE = GameBalance.GRID_SIZE  # 标准网格大小，与蛇的移动步长一致
+
     @classmethod
     def align_to_grid(cls, x: int, y: int) -> Tuple[int, int]:
         """
@@ -20,7 +21,7 @@ class GridUtils:
         aligned_x = (x // cls.GRID_SIZE) * cls.GRID_SIZE
         aligned_y = (y // cls.GRID_SIZE) * cls.GRID_SIZE
         return (aligned_x, aligned_y)
-    
+
     @classmethod
     def get_grid_center(cls, grid_x: int, grid_y: int) -> Tuple[int, int]:
         """
@@ -32,7 +33,7 @@ class GridUtils:
         center_x = grid_x * cls.GRID_SIZE + cls.GRID_SIZE // 2
         center_y = grid_y * cls.GRID_SIZE + cls.GRID_SIZE // 2
         return (center_x, center_y)
-    
+
     @classmethod
     def get_valid_grid_range(cls, screen_width: int, screen_height: int, margin: int = 1) -> Tuple[int, int, int, int]:
         """
@@ -47,7 +48,7 @@ class GridUtils:
         min_grid_y = margin
         max_grid_y = (screen_height // cls.GRID_SIZE) - margin
         return (min_grid_x, max_grid_x, min_grid_y, max_grid_y)
-    
+
     @classmethod
     def is_position_in_bounds(cls, x: int, y: int, screen_width: int, screen_height: int) -> bool:
         """
@@ -58,9 +59,9 @@ class GridUtils:
         :param screen_height: 屏幕高度
         :return: 是否在边界内
         """
-        return (cls.GRID_SIZE <= x <= screen_width - cls.GRID_SIZE and 
+        return (cls.GRID_SIZE <= x <= screen_width - cls.GRID_SIZE and
                 cls.GRID_SIZE <= y <= screen_height - cls.GRID_SIZE)
-    
+
     @classmethod
     def calculate_distance(cls, pos1: Tuple[int, int], pos2: Tuple[int, int]) -> float:
         """
@@ -72,7 +73,7 @@ class GridUtils:
         dx = pos1[0] - pos2[0]
         dy = pos1[1] - pos2[1]
         return (dx * dx + dy * dy) ** 0.5
-    
+
     @classmethod
     def get_adjacent_positions(cls, x: int, y: int) -> List[Tuple[int, int]]:
         """
@@ -85,5 +86,5 @@ class GridUtils:
             (x, y - cls.GRID_SIZE),  # 上
             (x, y + cls.GRID_SIZE),  # 下
             (x - cls.GRID_SIZE, y),  # 左
-            (x + cls.GRID_SIZE, y)   # 右
+            (x + cls.GRID_SIZE, y)  # 右
         ]

@@ -148,7 +148,7 @@ class Snake(pygame.sprite.Sprite):
         # 根据初始位置和段间距离创建身体段
         # 使用与运行时相同的间距计算方式，确保一致性
         runtime_segment_distance = self._get_runtime_segment_distance()
-        
+
         for i in range(self.config.initial_body_segments):
             segment_x = self.position[0] - (i + 1) * runtime_segment_distance
             segment_y = self.position[1]

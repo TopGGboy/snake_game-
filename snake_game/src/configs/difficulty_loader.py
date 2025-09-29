@@ -13,6 +13,7 @@ class DifficultyLoader:
     """难度配置加载器"""
 
     def __init__(self):
+        self.grid_size = GameBalance.GRID_SIZE  # 网格单元大小
         self.config_dir = os.path.join(os.path.dirname(__file__), 'difficulty')
         self.loaded_configs = {}
 
@@ -79,16 +80,14 @@ class DifficultyLoader:
                     difficulties.append(difficulty_name)
         return sorted(difficulties)
 
-    def convert_map_to_walls(self, config: Dict[str, Any]) -> tuple:
+    def convert_map_to_walls(self, config: Dict[str, Any]):
         """
         将地图数据转换为墙体位置列表
         :param config: 难度配置
-        :return: (墙体位置列表, 网格单元大小) -> ([(x, y), ...], cell_size)
+        :return: (墙体位置列表, 网格单元大小) -> ([(x, y), ...], grid_size)
         """
         wall_positions = []
         map_data = config['map']
-
-        cell_size = GameBalance.GRID_SIZE  # 网格单元大小
 
         start_x = 0
         start_y = 0
@@ -96,11 +95,11 @@ class DifficultyLoader:
         for row_idx, row in enumerate(map_data):
             for col_idx, cell in enumerate(row):
                 if cell == 1:  # 1 表示墙壁
-                    x = start_x + col_idx * cell_size + cell_size // 2
-                    y = start_y + row_idx * cell_size + cell_size // 2
+                    x = start_x + col_idx * self.grid_size + self.grid_size // 2
+                    y = start_y + row_idx * self.grid_size + self.grid_size // 2
                     wall_positions.append((x, y))
 
-        return wall_positions, cell_size
+        return wall_positions
 
     def get_snake_initial_position(self, config: Dict[str, Any]) -> tuple:
         """
@@ -111,13 +110,11 @@ class DifficultyLoader:
         snake_config = config['snake']
         initial_pos = snake_config['initial_position']
 
-        cell_size = GameBalance.GRID_SIZE
-
         start_x = 0
         start_y = 0
 
-        x = start_x + initial_pos[0] * cell_size + cell_size // 2
-        y = start_y + initial_pos[1] * cell_size + cell_size // 2
+        x = start_x + initial_pos[0] * self.grid_size + self.grid_size // 2
+        y = start_y + initial_pos[1] * self.grid_size + self.grid_size // 2
 
         return (x, y)
 

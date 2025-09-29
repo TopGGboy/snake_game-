@@ -7,6 +7,7 @@ import json
 import os
 from typing import List, Tuple, Optional, Dict, Any
 from ..configs.config import Config
+from ..configs.game_balance import GameBalance
 
 
 class Wall(pygame.sprite.Sprite):
@@ -15,7 +16,7 @@ class Wall(pygame.sprite.Sprite):
     def __init__(self, position: Tuple[float, float], size: int = 30):
         pygame.sprite.Sprite.__init__(self)
         self.position = [float(position[0]), float(position[1])]  # 使用浮点坐标
-        self.size = size  # 墙块大小
+        self.grid_size = size  # 墙块大小
         self.collision_radius = size * 0.4  # 碰撞半径，稍小于视觉大小
 
         # 创建墙块图像
@@ -35,14 +36,14 @@ class Wall(pygame.sprite.Sprite):
 
     def _create_image(self) -> None:
         """创建墙块图像"""
-        self.image = pygame.Surface((self.size, self.size))
+        self.image = pygame.Surface((self.grid_size, self.grid_size))
         self.image.fill((100, 100, 100))  # 灰色填充
 
         # 添加边框
         pygame.draw.rect(self.image, (60, 60, 60), self.image.get_rect(), 2)
 
         # 添加高光效果（左上角）
-        highlight_rect = pygame.Rect(2, 2, self.size // 3, self.size // 3)
+        highlight_rect = pygame.Rect(2, 2, self.grid_size // 3, self.grid_size // 3)
         pygame.draw.rect(self.image, (150, 150, 150), highlight_rect)
 
     def check_collision(self, position: Tuple[float, float], radius: float) -> bool:
@@ -72,9 +73,9 @@ class Wall(pygame.sprite.Sprite):
         :param debug_collision: 是否绘制碰撞区域调试信息
         """
         # 绘制阴影效果
-        shadow_pos = (int(self.position[0] - self.size // 2 + 2),
-                      int(self.position[1] - self.size // 2 + 2))
-        shadow_rect = pygame.Rect(shadow_pos[0], shadow_pos[1], self.size, self.size)
+        shadow_pos = (int(self.position[0] - self.grid_size // 2 + 2),
+                      int(self.position[1] - self.grid_size // 2 + 2))
+        shadow_rect = pygame.Rect(shadow_pos[0], shadow_pos[1], self.grid_size, self.grid_size)
         pygame.draw.rect(surface, self.colors['shadow'], shadow_rect)
 
         # 绘制主体墙块
@@ -90,8 +91,8 @@ class Wall(pygame.sprite.Sprite):
 class WallManager:
     """墙管理器 - 管理所有墙块"""
 
-    def __init__(self, wall_size: int = 30):
-        self.wall_size = wall_size
+    def __init__(self):
+        self.wall_size = GameBalance.GRID_SIZE
         self.walls: List[Wall] = []
         self.config = Config.get_instance()
 
@@ -121,13 +122,10 @@ class WallManager:
         from ..configs.difficulty_loader import get_difficulty_loader
 
         loader = get_difficulty_loader()
-        wall_positions, cell_size = loader.convert_map_to_walls(difficulty_config)
-
-        # 更新墙块大小以匹配配置文件中的grid_size
-        self.wall_size = cell_size
+        wall_positions = loader.convert_map_to_walls(difficulty_config)
 
         self.load_from_positions(wall_positions)
-        print(f"加载墙体配置: 网格大小={cell_size}px, 墙体数量={len(wall_positions)}")
+        print(f"加载墙体配置: 网格大小={self.wall_size}px, 墙体数量={len(wall_positions)}")
 
     def create_border_walls(self, margin: int = 30) -> None:
         """
@@ -151,31 +149,6 @@ class WallManager:
         # 右侧边界
         for y in range(margin, self.config.SCREEN_H - margin + 1, self.wall_size):
             self.add_wall((self.config.SCREEN_W - margin, y))
-
-    def create_maze_pattern(self) -> None:
-        """
-        创建迷宫图案（在边界墙壁基础上添加内部障碍）
-        """
-        # 添加一些内部墙壁形成迷宫
-        center_x = self.config.SCREEN_W // 2
-        center_y = self.config.SCREEN_H // 2
-
-        # 中央十字形障碍
-        for i in range(-3, 4):
-            if i != 0:  # 留出中央通道
-                self.add_wall((center_x + i * self.wall_size, center_y))
-                self.add_wall((center_x, center_y + i * self.wall_size))
-
-        # 四个角落的L形障碍
-        corner_offset = 120
-        for dx, dy in [(-1, -1), (1, -1), (-1, 1), (1, 1)]:
-            corner_x = center_x + dx * corner_offset
-            corner_y = center_y + dy * corner_offset
-
-            # L形障碍
-            for i in range(3):
-                self.add_wall((corner_x + dx * i * self.wall_size, corner_y))
-                self.add_wall((corner_x, corner_y + dy * i * self.wall_size))
 
     def check_collision(self, position: Tuple[float, float], radius: float) -> bool:
         """
