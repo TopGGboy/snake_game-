@@ -35,7 +35,7 @@ class Game:
         游戏主循环
         """
         while True:
-            # 鼠标事件
+            # 事件处理
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
@@ -46,26 +46,22 @@ class Game:
                     if flag:
                         # 主界面逻辑
                         self.state.update_cursor(event.key)
+                    else:
+                        # 游戏进行中，将事件传递给当前状态
+                        if hasattr(self.state, 'handle_event'):
+                            self.state.handle_event(event)
 
                     self.keys = pygame.key.get_pressed()
-
-                    # 暂停游戏
-                    if event.key == pygame.K_ESCAPE and flag == False:
-                        self.pause_flag = not self.pause_flag
 
                 elif event.type == pygame.KEYUP:
                     self.keys = pygame.key.get_pressed()
                 elif event.type == pygame.MOUSEBUTTONDOWN:
-                    # 暂停界面的鼠标检测功能
-                    pass
+                    # 鼠标事件处理
+                    if hasattr(self.state, 'handle_event'):
+                        self.state.handle_event(event)
 
-            # 如果没有暂停则更新游戏状态
-            if not self.pause_flag:
-                self.update()
-
-            # 如果暂停则显示暂停界面
-            if self.pause_flag:
-                pass
+            # 更新游戏状态（无论是否暂停都需要更新，因为暂停逻辑现在在各个状态内部处理）
+            self.update()
 
             pygame.display.update()
             self.clock.tick(Config.FPS)
