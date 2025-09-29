@@ -114,12 +114,13 @@ class InfiniteMode:
 
         # 设置蛇的初始位置
         if self.json_config:
-            initial_pos = self.difficulty_loader.get_snake_initial_position(self.json_config, 30)
+            initial_pos = self.difficulty_loader.get_snake_initial_position(self.json_config)
         else:
             initial_pos = GridUtils.align_to_grid(*GameBalance.INITIAL_POSITION)
 
         self.snake.rect.center = initial_pos
         print(f"蛇初始位置设置为: {initial_pos}")
+        self.snake.reset(initial_pos)
 
         # 应用食物配置
         food_config = self.json_config.get('food', {})
@@ -393,7 +394,7 @@ class InfiniteMode:
         """重新开始游戏"""
         # 重新设置蛇的初始位置
         if self.json_config:
-            initial_pos = self.difficulty_loader.get_snake_initial_position(self.json_config, 30)
+            initial_pos = self.difficulty_loader.get_snake_initial_position(self.json_config)
         else:
             initial_pos = GridUtils.align_to_grid(*GameBalance.INITIAL_POSITION)
 

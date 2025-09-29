@@ -7,7 +7,6 @@ import json
 import os
 from typing import List, Tuple, Optional, Dict, Any
 from ..configs.config import Config
-from ..configs.game_balance import GameBalance
 
 
 class Wall(pygame.sprite.Sprite):
@@ -16,7 +15,7 @@ class Wall(pygame.sprite.Sprite):
     def __init__(self, position: Tuple[float, float], size: int = 30):
         pygame.sprite.Sprite.__init__(self)
         self.position = [float(position[0]), float(position[1])]  # 使用浮点坐标
-        self.size = size
+        self.size = size  # 墙块大小
         self.collision_radius = size * 0.4  # 碰撞半径，稍小于视觉大小
 
         # 创建墙块图像
@@ -120,10 +119,15 @@ class WallManager:
         :param difficulty_config: 难度配置字典
         """
         from ..configs.difficulty_loader import get_difficulty_loader
-        
+
         loader = get_difficulty_loader()
-        wall_positions = loader.convert_map_to_walls(difficulty_config, self.wall_size)
+        wall_positions, cell_size = loader.convert_map_to_walls(difficulty_config)
+
+        # 更新墙块大小以匹配配置文件中的grid_size
+        self.wall_size = cell_size
+
         self.load_from_positions(wall_positions)
+        print(f"加载墙体配置: 网格大小={cell_size}px, 墙体数量={len(wall_positions)}")
 
     def create_border_walls(self, margin: int = 30) -> None:
         """
@@ -131,19 +135,19 @@ class WallManager:
         :param margin: 边界距离屏幕边缘的距离
         """
         self.clear_walls()
-        
+
         # 顶部边界
         for x in range(margin, self.config.SCREEN_W - margin + 1, self.wall_size):
             self.add_wall((x, margin))
-        
+
         # 底部边界
         for x in range(margin, self.config.SCREEN_W - margin + 1, self.wall_size):
             self.add_wall((x, self.config.SCREEN_H - margin))
-        
+
         # 左侧边界
         for y in range(margin, self.config.SCREEN_H - margin + 1, self.wall_size):
             self.add_wall((margin, y))
-        
+
         # 右侧边界
         for y in range(margin, self.config.SCREEN_H - margin + 1, self.wall_size):
             self.add_wall((self.config.SCREEN_W - margin, y))
@@ -155,19 +159,19 @@ class WallManager:
         # 添加一些内部墙壁形成迷宫
         center_x = self.config.SCREEN_W // 2
         center_y = self.config.SCREEN_H // 2
-        
+
         # 中央十字形障碍
         for i in range(-3, 4):
             if i != 0:  # 留出中央通道
                 self.add_wall((center_x + i * self.wall_size, center_y))
                 self.add_wall((center_x, center_y + i * self.wall_size))
-        
+
         # 四个角落的L形障碍
         corner_offset = 120
         for dx, dy in [(-1, -1), (1, -1), (-1, 1), (1, 1)]:
             corner_x = center_x + dx * corner_offset
             corner_y = center_y + dy * corner_offset
-            
+
             # L形障碍
             for i in range(3):
                 self.add_wall((corner_x + dx * i * self.wall_size, corner_y))
@@ -213,6 +217,3 @@ class WallManager:
         """
         # 这里可以添加墙块的动画效果，比如闪烁、移动等
         pass
-
-
-
