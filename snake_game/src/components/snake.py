@@ -213,14 +213,22 @@ class Snake(pygame.sprite.Sprite):
         if not self.is_moving:
             return
 
-        # 1. 更新角度（平滑转向）
+        # 1. 更新角度（优化的平滑转向）
         if self.config.smooth_turning:
-            # 物理模拟： 真实世界中物体不能瞬间改变方向，这里模拟了转向惯性。
-            angle_diff = self._get_angle_difference(self.target_angle, self.angle)  # 角度差
-            max_turn = self.config.turn_speed * dt_seconds  # 转向速度限制
-
-            if abs(angle_diff) > max_turn:
-                # 渐进式转向，不能瞬间转向
+            angle_diff = self._get_angle_difference(self.target_angle, self.angle)
+            
+            # 自适应转向速度：角度差越大，转向越快
+            base_turn_speed = self.config.turn_speed
+            adaptive_multiplier = min(2.0, 1.0 + abs(angle_diff) / 90.0)  # 最大2倍速度
+            adaptive_turn_speed = base_turn_speed * adaptive_multiplier
+            
+            max_turn = adaptive_turn_speed * dt_seconds
+            
+            # 小角度直接转向，大角度渐进转向
+            if abs(angle_diff) <= 15.0:  # 15度以内直接转向
+                self.angle = self.target_angle
+            elif abs(angle_diff) > max_turn:
+                # 渐进式转向
                 turn_direction = 1 if angle_diff > 0 else -1
                 self.angle += turn_direction * max_turn
             else:

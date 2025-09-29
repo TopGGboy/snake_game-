@@ -25,10 +25,10 @@ class GameBalance:
 
     # 顺滑移动配置
     SMOOTH_MOVE_SPEED = 120.0  # 像素/秒 - 蛇的移动速度
-    SMOOTH_TURN_SPEED = 180.0  # 度/秒 - 转向速度
+    SMOOTH_TURN_SPEED = 360.0  # 度/秒 - 转向速度（提高转向响应性）
     SMOOTH_SEGMENT_DISTANCE = 15.0  # 身体段之间的距离  20.0
     SMOOTH_COLLISION_RADIUS = 12.0  # 碰撞检测半径
-    SMOOTH_MAX_TURN_ANGLE = 90.0  # 每秒最大转向角度
+    SMOOTH_MAX_TURN_ANGLE = 360.0  # 每秒最大转向角度（提高最大转向能力）
     SMOOTH_TURNING_ENABLED = True  # 启用平滑转向
 
     SMOOTH_BOOST_MULTIPLIER = 2.0  # 加速倍数
