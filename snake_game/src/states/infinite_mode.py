@@ -10,6 +10,7 @@ from src.utils.grid_utils import GridUtils
 from src.utils.performance_monitor import PerformanceMonitor
 from src.utils.font_manager import get_font_manager
 from ..states.pause_menu import PauseMenu
+from ..states.game_over_menu import GameOverMenu
 
 
 class InfiniteMode:
@@ -64,6 +65,9 @@ class InfiniteMode:
 
         # 创建暂停菜单实例
         self.pause_menu = PauseMenu(game_state=self)
+        
+        # 创建游戏结束菜单实例
+        self.game_over_menu = GameOverMenu(game_state=self)
 
         # 游戏统计
         self.score = 0
@@ -154,7 +158,23 @@ class InfiniteMode:
         处理pygame事件
         :param event: pygame事件
         """
-        if self.paused:
+        if self.game_over:
+            # 如果游戏结束，将事件传递给游戏结束菜单
+            self.game_over_menu.handle_event(event)
+            
+            # 检查游戏结束菜单是否完成
+            if self.game_over_menu.is_finished():
+                action = self.game_over_menu.get_action()
+                if action == 'restart':
+                    self.restart_game()
+                    self.game_over_menu.reset()
+                elif action == 'main_menu':
+                    self.finished = True
+                    self.next = 'main_menu'
+                elif action == 'quit':
+                    pygame.quit()
+                    quit()
+        elif self.paused:
             # 如果游戏暂停，将事件传递给暂停菜单
             self.pause_menu.handle_event(event)
             
@@ -182,11 +202,12 @@ class InfiniteMode:
             # 游戏进行中的事件处理
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE or event.key == pygame.K_p:
-                    # ESC或P键暂停游戏
-                    self.paused = True
-                    # 暂停时记录当前时间
-                    self.last_time = pygame.time.get_ticks()
-                    self.pause_menu.reset()
+                    # ESC或P键暂停游戏（只有在游戏未结束时才能暂停）
+                    if not self.game_over:
+                        self.paused = True
+                        # 暂停时记录当前时间
+                        self.last_time = pygame.time.get_ticks()
+                        self.pause_menu.reset()
 
     def update(self, surface, keys):
         """
@@ -201,8 +222,11 @@ class InfiniteMode:
         # 处理输入
         self._handle_input(keys)
 
+        # 如果游戏结束，更新游戏结束菜单
+        if self.game_over:
+            self.game_over_menu.update(surface, keys)
         # 如果游戏暂停，更新暂停菜单
-        if self.paused:
+        elif self.paused:
             self.pause_menu.update(surface, keys)
             # 暂停时更新last_time，防止恢复时时间跳跃
             self.last_time = pygame.time.get_ticks()
@@ -284,9 +308,8 @@ class InfiniteMode:
             Food.DEBUG_COLLISION = not Food.DEBUG_COLLISION
             print(f"碰撞检测调试日志: {'开启' if Food.DEBUG_COLLISION else '关闭'}")
 
-        # R 重新开始游戏
-        if keys[pygame.K_r] and self.game_over:
-            self.restart_game()
+        # 移除旧的R键重新开始逻辑，现在由游戏结束菜单处理
+        pass
 
     def _check_collisions(self):
         """
@@ -341,12 +364,12 @@ class InfiniteMode:
         self._draw_ui(surface, colors['text'])
 
         # 绘制暂停界面
-        if self.paused:
+        if self.paused and not self.game_over:
             self.pause_menu.draw(surface)
 
         # 绘制游戏结束界面
         if self.game_over:
-            self._draw_game_over(surface)
+            self.game_over_menu.draw(surface)
 
         # 绘制性能监控
         self.performance_monitor.draw_stats(surface)
@@ -466,6 +489,12 @@ class InfiniteMode:
 
         self.score = 0
         self.game_over = False
+        self.paused = False  # 重新开始时确保不是暂停状态
         self.last_time = pygame.time.get_ticks()
         self.performance_monitor.reset_stats()
+        
+        # 重置菜单状态
+        self.pause_menu.reset()
+        self.game_over_menu.reset()
+        
         print(f"游戏重新开始 - 难度: {self.difficulty_config.get('name', '默认')}")
