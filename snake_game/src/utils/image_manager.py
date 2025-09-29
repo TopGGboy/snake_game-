@@ -37,19 +37,19 @@ class ImageManager:
             if not os.path.exists(image_path):
                 print(f"图片文件不存在: {image_path}")
                 return False
-            
+
             # 确保pygame已初始化
             if not pygame.get_init():
                 pygame.init()
-            
+
             # 使用完整的图片处理流程
             try:
                 # 使用工具函数进行完整的图片处理
                 from .tools import process_game_image
-                
+
                 # 处理图片：抠图 + 标准化尺寸
                 standard_image = process_game_image(image_path, self.standard_size, colorkey)
-                
+
                 if standard_image:
                     self.standard_images[image_key] = standard_image
                     print(f"标准化图片加载成功: {image_key} -> {self.standard_size}x{self.standard_size}")
@@ -57,7 +57,7 @@ class ImageManager:
                 else:
                     print(f"图片处理失败: {image_key}")
                     return False
-                
+
             except Exception as e:
                 print(f"图片处理时出错 {image_path}: {e}")
                 return False
@@ -115,13 +115,13 @@ class ImageManager:
         if not self.load_standard_image(f"{snake_name}_head", head_path):
             success = False
 
-        # 加载蛇身（可能有多个身体段图片）
-        for i in range(5):  # 尝试加载body0到body4
-            body_path = os.path.join('assets', 'graphics', 'snake', snake_name, f'{snake_name}_body{i}.png')
-            if os.path.exists(body_path):
-                self.load_standard_image(f"{snake_name}_body{i}", body_path)
-            elif i == 0:  # 至少需要body0
-                success = False
+        # # 加载蛇身（可能有多个身体段图片）
+        # for i in range(5):  # 尝试加载body0到body4
+        #     body_path = os.path.join('assets', 'graphics', 'snake', snake_name, f'{snake_name}_body{i}.png')
+        #     if os.path.exists(body_path):
+        #         self.load_standard_image(f"{snake_name}_body{i}", body_path)
+        #     elif i == 0:  # 至少需要body0
+        #         success = False
 
         return success
 
@@ -138,26 +138,26 @@ class ImageManager:
     def get_snake_head(self, snake_name: str, size: int) -> Optional[pygame.Surface]:
         """获取蛇头图片"""
         image_key = f"{snake_name}_head"
-        
+
         # 如果图片未加载，尝试懒加载
         if image_key not in self.standard_images:
             print(f"懒加载蛇头图片: {snake_name}")
             head_path = os.path.join('assets', 'graphics', 'snake', snake_name, f'{snake_name}_head.png')
             self.load_standard_image(image_key, head_path)
-        
+
         return self.get_image(image_key, size)
 
     def get_snake_body(self, snake_name: str, size: int, segment_index: int = 0) -> Optional[pygame.Surface]:
         """获取蛇身图片"""
         image_key = f"{snake_name}_body{segment_index}"
-        
+
         # 如果图片未加载，尝试懒加载
         if image_key not in self.standard_images:
             print(f"懒加载蛇身图片: {snake_name}_body{segment_index}")
             body_path = os.path.join('assets', 'graphics', 'snake', snake_name, f'{snake_name}_body{segment_index}.png')
             if os.path.exists(body_path):
                 self.load_standard_image(image_key, body_path)
-        
+
         return self.get_image(image_key, size)
 
     def get_food(self, food_name: str, size: int) -> Optional[pygame.Surface]:
@@ -168,7 +168,7 @@ class ImageManager:
             food_path = os.path.join('assets', 'graphics', 'food', f'{food_name}.png')
             if os.path.exists(food_path):
                 self.load_standard_image(food_name, food_path)
-        
+
         return self.get_image(food_name, size)
 
     def clear_cache(self):

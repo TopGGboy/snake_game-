@@ -1,0 +1,49 @@
+{
+  "description": "贪吃蛇游戏墙体配置示例",
+  "wall_size": 30,
+  "walls": [
+    {
+      "type": "line",
+      "start_pos": [100, 100],
+      "end_pos": [700, 100],
+      "spacing": 30,
+      "description": "顶部边界"
+    },
+    {
+      "type": "line", 
+      "start_pos": [100, 500],
+      "end_pos": [700, 500],
+      "spacing": 30,
+      "description": "底部边界"
+    },
+    {
+      "type": "line",
+      "start_pos": [100, 100],
+      "end_pos": [100, 500],
+      "spacing": 30,
+      "description": "左侧边界"
+    },
+    {
+      "type": "line",
+      "start_pos": [700, 100],
+      "end_pos": [700, 500],
+      "spacing": 30,
+      "description": "右侧边界"
+    },
+    {
+      "type": "rectangle",
+      "top_left": [300, 200],
+      "bottom_right": [500, 400],
+      "filled": false,
+      "description": "中央矩形障碍"
+    },
+    {
+      "type": "pattern",
+      "positions": [
+        [200, 150], [250, 150], [300, 150],
+        [500, 450], [550, 450], [600, 450]
+      ],
+      "description": "自定义图案"
+    }
+  ]
+}

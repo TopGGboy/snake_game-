@@ -3,7 +3,9 @@
 """
 import pygame
 import math
-from typing import List, Tuple, Optional
+import json
+import os
+from typing import List, Tuple, Optional, Dict, Any
 from ..configs.config import Config
 from ..configs.game_balance import GameBalance
 
@@ -102,112 +104,74 @@ class WallManager:
         wall = Wall(position, self.wall_size)
         self.walls.append(wall)
 
-    def add_wall_line(self, start_pos: Tuple[float, float], end_pos: Tuple[float, float],
-                      spacing: float = None) -> None:
+    def load_from_positions(self, positions: List[Tuple[float, float]]) -> None:
         """
-        添加一条墙线
-        :param start_pos: 起始位置
-        :param end_pos: 结束位置
-        :param spacing: 墙块间距，默认为墙块大小
+        从位置列表加载墙块
+        :param positions: 墙块位置列表
         """
-        if spacing is None:
-            spacing = self.wall_size
+        self.clear_walls()
+        for position in positions:
+            self.add_wall(position)
+        print(f"加载了 {len(positions)} 个墙块")
 
-        # 计算方向向量
-        dx = end_pos[0] - start_pos[0]
-        dy = end_pos[1] - start_pos[1]
-        distance = math.sqrt(dx * dx + dy * dy)
-
-        if distance == 0:
-            self.add_wall(start_pos)
-            return
-
-        # 单位向量
-        unit_x = dx / distance
-        unit_y = dy / distance
-
-        # 沿线添加墙块
-        current_distance = 0
-        while current_distance <= distance:
-            wall_x = start_pos[0] + unit_x * current_distance
-            wall_y = start_pos[1] + unit_y * current_distance
-            self.add_wall((wall_x, wall_y))
-            current_distance += spacing
-
-    def add_wall_rectangle(self, top_left: Tuple[float, float],
-                           bottom_right: Tuple[float, float],
-                           filled: bool = False) -> None:
+    def load_from_difficulty_config(self, difficulty_config: Dict[str, Any]) -> None:
         """
-        添加矩形墙
-        :param top_left: 左上角位置
-        :param bottom_right: 右下角位置
-        :param filled: 是否填充内部
+        从难度配置加载墙块
+        :param difficulty_config: 难度配置字典
         """
-        if filled:
-            # 填充整个矩形
-            spacing = self.wall_size
-            y = top_left[1]
-            while y <= bottom_right[1]:
-                x = top_left[0]
-                while x <= bottom_right[0]:
-                    self.add_wall((x, y))
-                    x += spacing
-                y += spacing
-        else:
-            # 只绘制边框
-            # 上边
-            self.add_wall_line(top_left, (bottom_right[0], top_left[1]))
-            # 下边
-            self.add_wall_line((top_left[0], bottom_right[1]), bottom_right)
-            # 左边
-            self.add_wall_line(top_left, (top_left[0], bottom_right[1]))
-            # 右边
-            self.add_wall_line((bottom_right[0], top_left[1]), bottom_right)
+        from ..configs.difficulty_loader import get_difficulty_loader
+        
+        loader = get_difficulty_loader()
+        wall_positions = loader.convert_map_to_walls(difficulty_config, self.wall_size)
+        self.load_from_positions(wall_positions)
 
-    def create_border_walls(self, margin: int = 50) -> None:
+    def create_border_walls(self, margin: int = 30) -> None:
         """
-        创建屏幕边界墙
-        :param margin: 距离屏幕边缘的距离
+        创建边界墙壁
+        :param margin: 边界距离屏幕边缘的距离
         """
-        screen_w = self.config.SCREEN_W
-        screen_h = self.config.SCREEN_H
-
-        # 上边界
-        self.add_wall_line((margin, margin), (screen_w - margin, margin))
-        # 下边界
-        self.add_wall_line((margin, screen_h - margin), (screen_w - margin, screen_h - margin))
-        # 左边界
-        self.add_wall_line((margin, margin), (margin, screen_h - margin))
-        # 右边界
-        self.add_wall_line((screen_w - margin, margin), (screen_w - margin, screen_h - margin))
+        self.clear_walls()
+        
+        # 顶部边界
+        for x in range(margin, self.config.SCREEN_W - margin + 1, self.wall_size):
+            self.add_wall((x, margin))
+        
+        # 底部边界
+        for x in range(margin, self.config.SCREEN_W - margin + 1, self.wall_size):
+            self.add_wall((x, self.config.SCREEN_H - margin))
+        
+        # 左侧边界
+        for y in range(margin, self.config.SCREEN_H - margin + 1, self.wall_size):
+            self.add_wall((margin, y))
+        
+        # 右侧边界
+        for y in range(margin, self.config.SCREEN_H - margin + 1, self.wall_size):
+            self.add_wall((self.config.SCREEN_W - margin, y))
 
     def create_maze_pattern(self) -> None:
-        """创建简单的迷宫模式"""
-        screen_w = self.config.SCREEN_W
-        screen_h = self.config.SCREEN_H
-
+        """
+        创建迷宫图案（在边界墙壁基础上添加内部障碍）
+        """
+        # 添加一些内部墙壁形成迷宫
+        center_x = self.config.SCREEN_W // 2
+        center_y = self.config.SCREEN_H // 2
+        
         # 中央十字形障碍
-        center_x = screen_w // 2
-        center_y = screen_h // 2
-
-        # 水平线
-        self.add_wall_line((center_x - 100, center_y), (center_x + 100, center_y))
-        # 垂直线
-        self.add_wall_line((center_x, center_y - 80), (center_x, center_y + 80))
-
-        # 四个角落的小障碍
-        corner_size = 60
-        # 左上角
-        self.add_wall_rectangle((100, 100), (100 + corner_size, 100 + corner_size))
-        # 右上角
-        self.add_wall_rectangle((screen_w - 100 - corner_size, 100),
-                                (screen_w - 100, 100 + corner_size))
-        # 左下角
-        self.add_wall_rectangle((100, screen_h - 100 - corner_size),
-                                (100 + corner_size, screen_h - 100))
-        # 右下角
-        self.add_wall_rectangle((screen_w - 100 - corner_size, screen_h - 100 - corner_size),
-                                (screen_w - 100, screen_h - 100))
+        for i in range(-3, 4):
+            if i != 0:  # 留出中央通道
+                self.add_wall((center_x + i * self.wall_size, center_y))
+                self.add_wall((center_x, center_y + i * self.wall_size))
+        
+        # 四个角落的L形障碍
+        corner_offset = 120
+        for dx, dy in [(-1, -1), (1, -1), (-1, 1), (1, 1)]:
+            corner_x = center_x + dx * corner_offset
+            corner_y = center_y + dy * corner_offset
+            
+            # L形障碍
+            for i in range(3):
+                self.add_wall((corner_x + dx * i * self.wall_size, corner_y))
+                self.add_wall((corner_x, corner_y + dy * i * self.wall_size))
 
     def check_collision(self, position: Tuple[float, float], radius: float) -> bool:
         """
@@ -249,3 +213,6 @@ class WallManager:
         """
         # 这里可以添加墙块的动画效果，比如闪烁、移动等
         pass
+
+
+

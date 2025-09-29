@@ -4,6 +4,7 @@
 import pygame
 from src.configs.config import Config
 from src.configs.game_balance import GameBalance
+from src.configs.difficulty_loader import get_difficulty_loader
 from src.utils.font_manager import get_font_manager
 
 
@@ -19,56 +20,12 @@ class DifficultySelection:
 
         # 获取字体管理器
         self.font_manager = get_font_manager()
+        
+        # 获取难度配置加载器
+        self.difficulty_loader = get_difficulty_loader()
 
-        # 难度选项配置
-        self.difficulty_options = [
-            {
-                'name': '娱乐模式',
-                'key': 'entertainment',
-                'description': '轻松愉快，适合休闲',
-                'features': [
-                    '• 移动速度较慢',
-                    '• 无边界墙壁',
-                    '• 食物分数: 5分',
-                    '• 适合新手练习'
-                ],
-                'color': (100, 255, 100),  # 绿色
-                'speed': 80.0,
-                'walls': False,
-                'food_score': 5
-            },
-            {
-                'name': '困难模式',
-                'key': 'hard',
-                'description': '挑战你的反应速度',
-                'features': [
-                    '• 移动速度适中',
-                    '• 有边界墙壁',
-                    '• 食物分数: 10分',
-                    '• 经典贪吃蛇体验'
-                ],
-                'color': (255, 255, 100),  # 黄色
-                'speed': 120.0,
-                'walls': True,
-                'food_score': 10
-            },
-            {
-                'name': '噩梦模式',
-                'key': 'nightmare',
-                'description': '极限挑战，勇者专属',
-                'features': [
-                    '• 移动速度很快',
-                    '• 复杂迷宫障碍',
-                    '• 食物分数: 20分',
-                    '• 终极挑战体验'
-                ],
-                'color': (255, 100, 100),  # 红色
-                'speed': 180.0,
-                'walls': True,
-                'maze': True,
-                'food_score': 20
-            }
-        ]
+        # 从JSON文件加载难度选项配置
+        self.difficulty_options = self._load_difficulty_options()
 
         self.selected_option = 0  # 当前选中的选项
         self.back_option = len(self.difficulty_options)  # 返回选项的索引
@@ -76,6 +33,90 @@ class DifficultySelection:
         # 动画效果
         self.animation_time = 0
         self.pulse_speed = 2.0
+
+    def _load_difficulty_options(self):
+        """
+        从JSON配置文件加载难度选项
+        """
+        options = []
+        
+        # 定义难度映射和显示配置
+        difficulty_mapping = {
+            'easy': {
+                'display_name': '简单模式',
+                'description': '适合新手的简单地图',
+                'color': (100, 255, 100),  # 绿色
+                'features': [
+                    '• 只有边界墙壁',
+                    '• 移动速度较慢',
+                    '• 食物分数倍率: 1.0x',
+                    '• 适合新手练习'
+                ]
+            },
+            'hard': {
+                'display_name': '困难模式',
+                'description': '有一些障碍物的中等难度',
+                'color': (255, 255, 100),  # 黄色
+                'features': [
+                    '• 有内部障碍物',
+                    '• 移动速度适中',
+                    '• 食物分数倍率: 1.5x',
+                    '• 经典挑战体验'
+                ]
+            },
+            'hell': {
+                'display_name': '地狱模式',
+                'description': '复杂迷宫式的困难地图',
+                'color': (255, 100, 100),  # 红色
+                'features': [
+                    '• 复杂迷宫障碍',
+                    '• 移动速度很快',
+                    '• 食物分数倍率: 2.0x',
+                    '• 终极挑战体验'
+                ]
+            }
+        }
+        
+        # 获取可用的难度配置
+        available_difficulties = self.difficulty_loader.get_available_difficulties()
+        
+        for difficulty_key in available_difficulties:
+            # 加载JSON配置
+            json_config = self.difficulty_loader.load_difficulty_config(difficulty_key)
+            if json_config:
+                # 获取显示配置
+                display_config = difficulty_mapping.get(difficulty_key, {
+                    'display_name': json_config.get('name', difficulty_key),
+                    'description': json_config.get('description', ''),
+                    'color': (200, 200, 200),
+                    'features': ['• 自定义配置']
+                })
+                
+                # 合并配置
+                option = {
+                    'name': display_config['display_name'],
+                    'key': difficulty_key,
+                    'description': display_config['description'],
+                    'features': display_config['features'],
+                    'color': display_config['color'],
+                    'json_config': json_config  # 保存完整的JSON配置
+                }
+                
+                options.append(option)
+        
+        # 如果没有找到配置文件，使用默认配置
+        if not options:
+            print("警告: 未找到难度配置文件，使用默认配置")
+            options = [{
+                'name': '默认模式',
+                'key': 'default',
+                'description': '默认游戏配置',
+                'features': ['• 基础游戏体验'],
+                'color': (200, 200, 200),
+                'json_config': None
+            }]
+        
+        return options
 
     def update_cursor(self, event_key):
         """

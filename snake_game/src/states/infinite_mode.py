@@ -4,6 +4,7 @@ from src.components.food import FoodManager
 from src.components.wall import WallManager
 from src.configs.config import Config
 from src.configs.game_balance import GameBalance
+from src.configs.difficulty_loader import get_difficulty_loader
 from src.utils.image_manager import initialize_game_images
 from src.utils.grid_utils import GridUtils
 from src.utils.performance_monitor import PerformanceMonitor
@@ -19,14 +20,24 @@ class InfiniteMode:
         self.finished = False
         self.next = None
 
-        # 应用难度配置
+        # 获取难度配置加载器
+        self.difficulty_loader = get_difficulty_loader()
+
+        # 处理难度配置
         self.difficulty_config = difficulty_config or {
-            'name': '困难模式',
-            'key': 'hard',
-            'speed': 120.0,
-            'walls': True,
-            'food_score': 10
+            'name': '默认模式',
+            'key': 'default',
+            'json_config': None
         }
+
+        # 获取JSON配置
+        self.json_config = None
+        if self.difficulty_config and 'json_config' in self.difficulty_config:
+            self.json_config = self.difficulty_config['json_config']
+
+        # 如果没有JSON配置，尝试加载
+        if not self.json_config and 'key' in self.difficulty_config:
+            self.json_config = self.difficulty_loader.load_difficulty_config(self.difficulty_config['key'])
 
         # 初始化图片管理器
         print("初始化图片管理器...")
@@ -34,29 +45,18 @@ class InfiniteMode:
 
         self.snake = Snake("snake0")  # 创建蛇实例
 
-        # 根据难度配置调整蛇的速度
-        self.snake.config.move_speed = self.difficulty_config['speed']
-        self.snake.normal_speed = self.difficulty_config['speed']  # 蛇的初始速度
-        self.snake.boost_speed = self.difficulty_config['speed'] * self.snake.config.boost_multiplier  # 蛇的加速速度
-
-        # 设置蛇的初始位置到屏幕中心，确保网格对齐
-        initial_pos = GridUtils.align_to_grid(*GameBalance.INITIAL_POSITION)  # 获取网格对齐的初始位置
-        self.snake.rect.center = initial_pos  # 设置蛇的初始位置
-        print(f"蛇初始位置设置为: {initial_pos}")
-
         # 获取屏幕尺寸
         self.config = Config.get_instance()
         self.screen_width = self.config.SCREEN_W
         self.screen_height = self.config.SCREEN_H
 
+        # 根据JSON配置设置游戏参数
+        self._apply_json_config()
+
         # 创建食物管理器
         self.food_manager = FoodManager(max_food_count=GameBalance.MAX_FOOD_COUNT)
 
-        # 根据难度配置调整食物分数
-        for food in self.food_manager.foods:
-            food.score_value = self.difficulty_config['food_score']
-
-        # 创建墙管理器
+        # 创建墙管理器并加载墙体
         self.wall_manager = WallManager()
         self._setup_walls()
 
@@ -65,7 +65,7 @@ class InfiniteMode:
         self.high_score = 0
 
         # 难度和速度管理
-        self.current_difficulty = self.difficulty_config['key']
+        self.current_difficulty = self.difficulty_config.get('key', 'default')
         self.dynamic_speed = False  # 是否启用动态速度调整
 
         # 时间管理
@@ -84,23 +84,64 @@ class InfiniteMode:
         # 调试选项
         self.debug_collision = False  # 是否显示碰撞区域
 
-        print(f"无尽模式初始化完成 - 难度: {self.difficulty_config['name']}")
+        print(f"无尽模式初始化完成 - 难度: {self.difficulty_config.get('name', '默认')}")
 
-    def _setup_walls(self):
-        """根据难度配置设置墙壁"""
-        if not self.difficulty_config.get('walls', False):
-            # 娱乐模式：无墙壁
+    def _apply_json_config(self):
+        """应用JSON配置到游戏参数"""
+        if not self.json_config:
+            # 使用默认配置
+            self.snake.config.move_speed = 120.0
+            self.snake.normal_speed = 120.0
+            self.snake.boost_speed = 120.0 * self.snake.config.boost_multiplier
+
+            # 设置默认初始位置
+            initial_pos = GridUtils.align_to_grid(*GameBalance.INITIAL_POSITION)
+            self.snake.rect.center = initial_pos
+            print(f"使用默认配置，蛇初始位置: {initial_pos}")
             return
 
-        if self.difficulty_config.get('maze', False):
-            # 噩梦模式：复杂迷宫
-            self.wall_manager.create_border_walls(margin=30)
-            self.wall_manager.create_maze_pattern()
-            print("创建了迷宫模式墙壁")
+        # 应用蛇的配置
+        snake_config = self.json_config.get('snake', {})
+        speed = snake_config.get('speed', 5)
+
+        # 将JSON中的速度值转换为实际的移动速度
+        # JSON中的speed是每秒移动的格子数，需要转换为像素/秒
+        actual_speed = speed * 30  # 假设每个格子30像素
+
+        self.snake.config.move_speed = actual_speed
+        self.snake.normal_speed = actual_speed
+        self.snake.boost_speed = actual_speed * self.snake.config.boost_multiplier
+
+        # 设置蛇的初始位置
+        if self.json_config:
+            initial_pos = self.difficulty_loader.get_snake_initial_position(self.json_config, 30)
         else:
-            # 困难模式：边界墙壁
+            initial_pos = GridUtils.align_to_grid(*GameBalance.INITIAL_POSITION)
+
+        self.snake.rect.center = initial_pos
+        print(f"蛇初始位置设置为: {initial_pos}")
+
+        # 应用食物配置
+        food_config = self.json_config.get('food', {})
+        special_food_chance = food_config.get('special_food_chance', 0.1)
+
+        # 应用游戏设置
+        game_settings = self.json_config.get('game_settings', {})
+        self.score_multiplier = game_settings.get('score_multiplier', 1.0)
+        self.walls_kill = game_settings.get('walls_kill', True)
+        self.self_collision = game_settings.get('self_collision', True)
+
+    def _setup_walls(self):
+        """根据JSON配置设置墙壁"""
+        if not self.json_config:
+            # 没有JSON配置，创建默认边界墙壁
             self.wall_manager.create_border_walls(margin=30)
-            print("创建了边界墙壁")
+            print("创建了默认边界墙壁")
+            return
+
+        # 使用JSON配置加载墙体
+        self.wall_manager.load_from_difficulty_config(self.json_config)
+        print(f"从JSON配置加载了墙体: {self.json_config.get('name', '未知')}")
 
     def update(self, surface, keys):
         """
@@ -152,7 +193,9 @@ class InfiniteMode:
             # 如果吃到食物，蛇增长
             if score_gained > 0:
                 self.snake.grow()
-                self.score += score_gained
+                # 应用分数倍率
+                actual_score = int(score_gained * getattr(self, 'score_multiplier', 1.0))
+                self.score += actual_score
                 self.high_score = max(self.high_score, self.score)
                 print(f"得分: {self.score}, 蛇长度: {self.snake.get_length()}")
 
@@ -199,23 +242,24 @@ class InfiniteMode:
         """
         检查所有碰撞情况
         """
-        # 检查是否撞到自己
-        if self.snake.check_self_collision():
+        # 检查是否撞到自己（如果启用自碰撞）
+        if getattr(self, 'self_collision', True) and self.snake.check_self_collision():
             self.snake.is_dead = True
             self.game_over = True
             print(f"游戏结束：蛇撞到自己了！最终得分: {self.score}")
             return
 
-        # 检查是否撞到墙壁
-        snake_head_pos = (self.snake.position[0], self.snake.position[1])
-        if self.wall_manager.check_collision(snake_head_pos, self.snake.config.collision_radius):
-            self.snake.is_dead = True
-            self.game_over = True
-            print(f"游戏结束：蛇撞到墙壁了！最终得分: {self.score}")
-            return
+        # 检查是否撞到墙壁（如果启用墙壁碰撞）
+        if getattr(self, 'walls_kill', True):
+            snake_head_pos = (self.snake.position[0], self.snake.position[1])
+            if self.wall_manager.check_collision(snake_head_pos, self.snake.config.collision_radius):
+                self.snake.is_dead = True
+                self.game_over = True
+                print(f"游戏结束：蛇撞到墙壁了！最终得分: {self.score}")
+                return
 
-        # 检查是否撞到边界（仅在娱乐模式下，因为其他模式有墙壁）
-        if not self.difficulty_config.get('walls', False):
+        # 检查是否撞到边界（如果没有墙壁或墙壁不致命）
+        if not getattr(self, 'walls_kill', True) or self.wall_manager.get_wall_count() == 0:
             if self.snake.check_boundary_collision(screen_width=self.screen_width, screen_height=self.screen_height):
                 self.snake.is_dead = True
                 self.game_over = True
@@ -347,17 +391,19 @@ class InfiniteMode:
 
     def restart_game(self):
         """重新开始游戏"""
-        self.snake.reset(GridUtils.align_to_grid(*GameBalance.INITIAL_POSITION))
+        # 重新设置蛇的初始位置
+        if self.json_config:
+            initial_pos = self.difficulty_loader.get_snake_initial_position(self.json_config, 30)
+        else:
+            initial_pos = GridUtils.align_to_grid(*GameBalance.INITIAL_POSITION)
 
-        # 重新应用难度配置到蛇
-        self.snake.config.move_speed = self.difficulty_config['speed']
-        self.snake.normal_speed = self.difficulty_config['speed']
-        self.snake.boost_speed = self.difficulty_config['speed'] * self.snake.config.boost_multiplier
+        self.snake.reset(initial_pos)
 
-        # 重置食物管理器并重新应用食物分数
+        # 重新应用JSON配置
+        self._apply_json_config()
+
+        # 重置食物管理器
         self.food_manager.reset()
-        for food in self.food_manager.foods:
-            food.score_value = self.difficulty_config['food_score']
 
         # 重新设置墙壁
         self.wall_manager.clear_walls()
@@ -367,4 +413,4 @@ class InfiniteMode:
         self.game_over = False
         self.last_time = pygame.time.get_ticks()
         self.performance_monitor.reset_stats()
-        print(f"游戏重新开始 - 难度: {self.difficulty_config['name']}")
+        print(f"游戏重新开始 - 难度: {self.difficulty_config.get('name', '默认')}")

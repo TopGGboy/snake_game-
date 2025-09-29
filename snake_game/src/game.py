@@ -83,19 +83,19 @@ class Game:
                 self.state = MainMenu()
                 self.state.finished = False
                 self.config.MAIN_MENU_FLAG = True
-                
+
             elif self.next_state == "difficulty_selection":
                 # 进入难度选择
                 self.state = DifficultySelection()
                 self.state.finished = False
                 self.config.MAIN_MENU_FLAG = True  # 保持菜单模式用于键盘导航
-                
+
             elif self.next_state == "infinite_mode":
                 # 进入无尽模式
                 # 如果来自难度选择，获取选中的难度配置
                 if hasattr(self.state, 'get_selected_difficulty'):
                     self.selected_difficulty = self.state.get_selected_difficulty()
-                
+
                 self.state = InfiniteMode(self.selected_difficulty)
                 self.state.finished = False
                 self.config.MAIN_MENU_FLAG = False
