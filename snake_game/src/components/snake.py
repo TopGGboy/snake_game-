@@ -137,13 +137,20 @@ class Snake(pygame.sprite.Sprite):
 
         print(f"蛇头初始位置: {initial_pos}")
 
+    def _get_runtime_segment_distance(self) -> float:
+        """获取运行时使用的身体段间距，确保所有地方使用相同的计算方式"""
+        return self.body_radius * 1.6
+
     def _setup_body_segments(self) -> None:
         """初始化身体段"""
         self.body_segments: List[List[float]] = []  # 身体段位置 [x, y]
 
         # 根据初始位置和段间距离创建身体段
+        # 使用与运行时相同的间距计算方式，确保一致性
+        runtime_segment_distance = self._get_runtime_segment_distance()
+        
         for i in range(self.config.initial_body_segments):
-            segment_x = self.position[0] - (i + 1) * self.config.segment_distance
+            segment_x = self.position[0] - (i + 1) * runtime_segment_distance
             segment_y = self.position[1]
             self.body_segments.append([segment_x, segment_y])
 
@@ -263,7 +270,7 @@ class Snake(pygame.sprite.Sprite):
             self.path_distances.append(self.total_path_length)
 
             # 限制路径点数量，避免内存过度使用
-            max_path_length = len(self.body_segments) * self.config.segment_distance * 2
+            max_path_length = len(self.body_segments) * self._get_runtime_segment_distance() * 2
             while (self.path_distances and
                    self.total_path_length - self.path_distances[0] > max_path_length):
                 self.path_points.pop(0)
@@ -286,18 +293,20 @@ class Snake(pygame.sprite.Sprite):
         # 如果路径点不足，使用简单跟随
         if len(self.path_points) < 2:
             # 简单的直线跟随 - 使用更紧密的间距
+            runtime_segment_distance = self._get_runtime_segment_distance()
             for i, segment in enumerate(self.body_segments):
                 # 使用稍小的间距确保连续性
-                distance = (i + 1) * (self.body_radius * 1.6)  # 约1.6倍半径的间距
+                distance = (i + 1) * runtime_segment_distance  # 约1.6倍半径的间距
                 angle_rad = math.radians(self.angle + 180)  # 反向
                 segment[0] = self.position[0] + math.cos(angle_rad) * distance
                 segment[1] = self.position[1] + math.sin(angle_rad) * distance
             return
 
         # 为每个身体段计算在路径上的位置 - 使用优化的间距
+        runtime_segment_distance = self._get_runtime_segment_distance()
         for i, segment in enumerate(self.body_segments):
             # 使用更紧密的间距确保连续性
-            target_distance = (i + 1) * (self.body_radius * 1.6)
+            target_distance = (i + 1) * runtime_segment_distance
 
             # 在路径上找到对应距离的位置
             segment_pos = self._get_position_on_path(target_distance)
@@ -342,7 +351,7 @@ class Snake(pygame.sprite.Sprite):
             self.body_segments.append([tail[0], tail[1]])
         else:
             # 如果没有身体段，在头部后面添加
-            new_x = self.position[0] - self.config.segment_distance
+            new_x = self.position[0] - self._get_runtime_segment_distance()
             new_y = self.position[1]
             self.body_segments.append([new_x, new_y])
 
