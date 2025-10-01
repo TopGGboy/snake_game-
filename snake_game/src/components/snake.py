@@ -12,6 +12,7 @@ from ..utils import tools
 from ..utils.grid_utils import GridUtils
 from ..configs.config import Config
 from ..configs.game_balance import GameBalance
+from ..configs.skin_config import get_snake_colors, get_snake_color_config
 from ..utils.image_manager import get_image_manager
 
 
@@ -545,36 +546,25 @@ class Snake(pygame.sprite.Sprite):
                                int(self.config.collision_radius), 3)
 
     def _get_skin_colors(self, skin_id: int) -> dict:
-        """根据皮肤ID获取对应的颜色配置"""
+        """根据皮肤ID获取对应的颜色配置（使用统一的皮肤配置系统）"""
+        # 获取完整的颜色配置
+        full_config = get_snake_color_config(skin_id)
+        
+        # 转换为蛇组件需要的格式
         skin_colors = {
-            0: {  # snake0 - 默认皮肤
-                'normal': {
-                    'fill': (255, 215, 0),  # 金黄色
-                    'border': (218, 165, 32),  # 深金色边框
-                    'highlight': (255, 255, 224)  # 浅黄高光
-                },
-                'boost': {
-                    'fill': (255, 215, 0),  # 金黄色
-                    'border': (255, 140, 0),  # 深橙色边框
-                    'highlight': (255, 255, 224)  # 浅黄高光
-                }
+            'normal': {
+                'fill': full_config['normal']['body_fill'],
+                'border': full_config['normal']['body_border'],
+                'highlight': full_config['normal']['highlight']
             },
-            1: {  # snake1 - 红色皮肤
-                'normal': {
-                    'fill': (255, 0, 0),  # 红色
-                    'border': (178, 34, 34),  # 深红色边框
-                    'highlight': (255, 182, 193)  # 浅粉高光
-                },
-                'boost': {
-                    'fill': (255, 69, 0),  # 橙红色
-                    'border': (220, 20, 60),  # 深红色边框
-                    'highlight': (255, 192, 203)  # 粉红高光
-                }
+            'boost': {
+                'fill': full_config['boost']['body_fill'],
+                'border': full_config['boost']['body_border'],
+                'highlight': full_config['boost']['highlight']
             }
         }
         
-        # 如果皮肤不存在，使用默认皮肤
-        return skin_colors.get(skin_id, skin_colors[0])
+        return skin_colors
 
     def change_skin(self, new_skin_id: int) -> None:
         """更改蛇的皮肤"""
@@ -583,6 +573,10 @@ class Snake(pygame.sprite.Sprite):
         # 重新加载图片
         self._load_images()
         print(f"蛇 {self.name} 皮肤已更改为: snake{new_skin_id}")
+
+    def get_skin_id(self) -> int:
+        """获取当前皮肤ID"""
+        return self.skin_id
 
     def get_available_skins(self) -> List[int]:
         """获取可用的皮肤ID列表"""

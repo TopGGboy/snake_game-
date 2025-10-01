@@ -45,8 +45,10 @@ class InfiniteMode:
         # 图片管理器现在由ImageManager自动处理
 
         # 创建蛇实例，应用皮肤
-        print(f"创建蛇实例，皮肤ID: {skin_name}")
-        self.snake = Snake("snake0", skin_id=skin_name)
+        # 将皮肤名称转换为整数ID（如 "snake1" -> 1）
+        skin_id = self._parse_skin_id(skin_name)
+        print(f"创建蛇实例，皮肤名称: {skin_name}, 皮肤ID: {skin_id}")
+        self.snake = Snake("snake0", skin_id=skin_id)
 
         # 获取屏幕尺寸
         self.config = Config.get_instance()
@@ -94,6 +96,26 @@ class InfiniteMode:
         self.debug_collision = False  # 是否显示碰撞区域
 
         print(f"无尽模式初始化完成 - 难度: {self.difficulty_config.get('name', '默认')}")
+
+    def _parse_skin_id(self, skin_name):
+        """将皮肤名称转换为整数ID"""
+        if skin_name is None:
+            return 0  # 默认皮肤ID
+        
+        # 如果已经是整数，直接返回
+        if isinstance(skin_name, int):
+            return skin_name
+        
+        # 从字符串中提取数字（如 "snake1" -> 1）
+        if isinstance(skin_name, str) and skin_name.startswith('snake'):
+            try:
+                return int(skin_name[5:])  # 提取"snake"后面的数字
+            except ValueError:
+                pass
+        
+        # 如果无法解析，返回默认皮肤ID
+        print(f"警告：无法解析皮肤名称 '{skin_name}'，使用默认皮肤ID 1")
+        return 1
 
     def _apply_json_config(self):
         """应用JSON配置到游戏参数"""

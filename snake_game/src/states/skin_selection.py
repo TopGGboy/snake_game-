@@ -1,59 +1,107 @@
 """
-蛇形象选择界面
-支持选择不同的蛇形象，智能加载图片资源
+蛇形象选择界面 - 卡片式布局
+支持选择不同的蛇形象，采用卡片式设计，便于扩展
 """
 import pygame
+import os
 from src.configs.config import Config
 from src.utils.font_manager import get_font_manager
-from src.configs.skin_config import get_available_skins, get_skin_by_key
+from src.configs.skin_config import get_available_skins, get_skin_by_key, get_snake_colors
+from src.utils.image_manager import get_image_manager
 
 
 class SkinSelection:
     def __init__(self):
         """
-        初始化皮肤选择状态
+        初始化皮肤选择状态 - 卡片式布局
         """
         self.config = Config.get_instance()
         self.finished = False
-        self.next = "main_menu"  # 选择皮肤后返回主菜单
-        self.selected_skin = None  # 选中的皮肤
+        self.next = "main_menu"
+        self.selected_skin = None
 
         # 获取字体管理器
         self.font_manager = get_font_manager()
 
         # 蛇形象配置
         self.skin_options = get_available_skins()
+        self.selected_option = 0  # 默认选择snake0
 
-        self.selected_option = 0  # 当前选中的选项
-        self.back_option = len(self.skin_options)  # 返回选项的索引
+        # 卡片布局参数
+        self.card_width = 280
+        self.card_height = 180
+        self.card_margin = 20
+        self.cards_per_row = 2
+
+        # 计算卡片布局
+        self._calculate_layout()
 
         # 动画效果
         self.animation_time = 0
-        self.pulse_speed = 2.0
+        self.hover_animation = {}
 
+        # 获取图片管理器
+        self.image_manager = get_image_manager()
 
+        # 返回按钮位置
+        self.back_button_rect = pygame.Rect(
+            self.config.SCREEN_W // 2 - 100,
+            self.config.SCREEN_H - 80,
+            200, 50
+        )
+
+    def _calculate_layout(self):
+        """计算卡片布局"""
+        total_cards = len(self.skin_options)
+        self.cards_per_row = min(2, total_cards)  # 每行最多2个卡片
+        rows_needed = (total_cards + self.cards_per_row - 1) // self.cards_per_row
+
+        # 计算起始Y位置
+        start_y = 120
+        total_height = rows_needed * (self.card_height + self.card_margin)
+        self.layout_start_y = (self.config.SCREEN_H - total_height) // 2
+
+        # 计算卡片位置
+        self.card_positions = []
+        for i in range(total_cards):
+            row = i // self.cards_per_row
+            col = i % self.cards_per_row
+
+            x = (self.config.SCREEN_W - (
+                        self.cards_per_row * (self.card_width + self.card_margin) - self.card_margin)) // 2
+            x += col * (self.card_width + self.card_margin)
+            y = self.layout_start_y + row * (self.card_height + self.card_margin)
+
+            self.card_positions.append((x, y))
 
     def update_cursor(self, event_key):
         """
-        处理菜单导航
+        处理卡片式导航
         """
-        total_options = len(self.skin_options) + 1  # 包括返回选项
+        total_options = len(self.skin_options)
 
-        if event_key == pygame.K_UP or event_key == pygame.K_w:
+        if event_key == pygame.K_LEFT or event_key == pygame.K_a:
             self.selected_option = (self.selected_option - 1) % total_options
-        elif event_key == pygame.K_DOWN or event_key == pygame.K_s:
+        elif event_key == pygame.K_RIGHT or event_key == pygame.K_d:
             self.selected_option = (self.selected_option + 1) % total_options
+        elif event_key == pygame.K_UP or event_key == pygame.K_w:
+            # 向上移动到上一行
+            if self.selected_option >= self.cards_per_row:
+                self.selected_option -= self.cards_per_row
+        elif event_key == pygame.K_DOWN or event_key == pygame.K_s:
+            # 向下移动到下一行
+            if self.selected_option + self.cards_per_row < total_options:
+                self.selected_option += self.cards_per_row
         elif event_key == pygame.K_RETURN or event_key == pygame.K_SPACE:
-            if self.selected_option < len(self.skin_options):
-                # 选择了某个皮肤
-                self.selected_skin = self.skin_options[self.selected_option]
-                self.finished = True
-                print(f"选择了皮肤: {self.selected_skin['name']}")
-            else:
-                # 选择了返回
-                self.finished = True
+            # 选择皮肤
+            self.selected_skin = self.skin_options[self.selected_option]
+            self.finished = True
+            print(f"选择了皮肤: {self.selected_skin['name']}")
         elif event_key == pygame.K_ESCAPE:
             # ESC键返回
+            self.finished = True
+        elif event_key == pygame.K_b:
+            # B键返回主菜单
             self.finished = True
 
     def update(self, surface, keys):
@@ -63,148 +111,231 @@ class SkinSelection:
         # 更新动画时间
         self.animation_time += 1 / 60
 
+        # 更新悬停动画
+        for i in range(len(self.skin_options)):
+            if i == self.selected_option:
+                if i not in self.hover_animation:
+                    self.hover_animation[i] = 0
+                self.hover_animation[i] = min(self.hover_animation[i] + 0.1, 1.0)
+            else:
+                if i in self.hover_animation:
+                    self.hover_animation[i] = max(self.hover_animation[i] - 0.05, 0)
+
         self.draw(surface)
 
     def draw(self, surface):
         """
-        绘制皮肤选择界面
+        绘制卡片式皮肤选择界面
         """
-        # 渐变背景
-        self._draw_gradient_background(surface)
+        # 绘制背景
+        self._draw_background(surface)
 
         # 绘制标题
         title_text = self.font_manager.render_text("选择蛇形象", 'title', (255, 255, 255))
         title_rect = title_text.get_rect(center=(self.config.SCREEN_W // 2, 60))
         surface.blit(title_text, title_rect)
 
-        # 绘制皮肤选项
-        start_y = 120
-        option_height = 80
-
+        # 绘制皮肤卡片
         for i, skin in enumerate(self.skin_options):
-            y_pos = start_y + i * option_height
+            x, y = self.card_positions[i]
             is_selected = (i == self.selected_option)
+            hover_progress = self.hover_animation.get(i, 0)
 
-            self._draw_skin_option(surface, skin, y_pos, is_selected)
+            self._draw_skin_card(surface, skin, x, y, is_selected, hover_progress)
 
-        # 绘制返回选项
-        back_y = start_y + len(self.skin_options) * option_height + 20
-        is_back_selected = (self.selected_option == self.back_option)
-        self._draw_back_option(surface, back_y, is_back_selected)
+        # 绘制返回按钮
+        self._draw_back_button(surface)
 
         # 绘制控制提示
         self._draw_controls_help(surface)
 
-    def _draw_gradient_background(self, surface):
-        """绘制渐变背景"""
+    def _draw_background(self, surface):
+        """绘制背景"""
+        # 深色渐变背景
         for y in range(self.config.SCREEN_H):
-            # 从深紫到黑色的渐变
             ratio = y / self.config.SCREEN_H
-            color_value = int(40 * (1 - ratio))
-            color = (color_value + 20, color_value, color_value + 40)
-            pygame.draw.line(surface, color, (0, y), (self.config.SCREEN_W, y))
+            r = int(20 * (1 - ratio))
+            g = int(15 * (1 - ratio))
+            b = int(30 * (1 - ratio))
+            pygame.draw.line(surface, (r, g, b), (0, y), (self.config.SCREEN_W, y))
 
-    def _draw_skin_option(self, surface, skin, y_pos, is_selected):
-        """绘制单个皮肤选项"""
-        # 计算选项区域
-        option_width = 600
-        option_height = 70
-        option_x = (self.config.SCREEN_W - option_width) // 2
-        option_rect = pygame.Rect(option_x, y_pos, option_width, option_height)
+    def _draw_skin_card(self, surface, skin, x, y, is_selected, hover_progress):
+        """绘制单个皮肤卡片"""
+        # 获取皮肤颜色配置
+        skin_id = skin['skin_id']
+        colors = get_snake_colors(skin_id, is_selected)  # is_selected作为加速状态
 
-        # 选中效果
+        # 计算卡片区域
+        card_rect = pygame.Rect(x, y, self.card_width, self.card_height)
+
+        # 悬停效果
+        hover_offset = int(hover_progress * 5)
+        card_rect.y -= hover_offset
+
+        # 卡片背景
         if is_selected:
-            # 脉动效果
-            pulse = 1.0 + 0.1 * pygame.math.Vector2(1, 0).rotate(self.animation_time * self.pulse_speed * 360).x
-            glow_color = tuple(int(c * 0.3) for c in skin['head_color'])
-
-            # 绘制发光边框
-            glow_rect = option_rect.inflate(10, 10)
-            pygame.draw.rect(surface, glow_color, glow_rect, 3)
-
-            # 背景高亮
-            bg_color = tuple(int(c * 0.2) for c in skin['head_color'])
-            pygame.draw.rect(surface, bg_color, option_rect)
+            # 选中状态 - 使用皮肤主题色
+            bg_color = tuple(int(c * 0.15) for c in colors['head_fill'])
+            border_color = colors['highlight']
+            border_width = 3
         else:
-            # 普通背景
-            pygame.draw.rect(surface, (30, 30, 30), option_rect)
+            # 普通状态
+            bg_color = (40, 40, 50)
+            border_color = (80, 80, 100)
+            border_width = 2
 
-        # 边框
-        border_color = skin['head_color'] if is_selected else (100, 100, 100)
-        pygame.draw.rect(surface, border_color, option_rect, 2)
+        # 绘制卡片背景
+        pygame.draw.rect(surface, bg_color, card_rect, border_radius=12)
+        pygame.draw.rect(surface, border_color, card_rect, border_width, border_radius=12)
 
-        # 皮肤名称
-        name_color = skin['head_color'] if is_selected else (200, 200, 200)
+        # 绘制发光效果
+        if is_selected:
+            glow_rect = card_rect.inflate(10, 10)
+            glow_color = tuple(int(c * 0.3) for c in colors['head_fill'])
+            pygame.draw.rect(surface, glow_color, glow_rect, 2, border_radius=16)
+
+        # 卡片内容区域
+        content_padding = 15
+        content_rect = card_rect.inflate(-content_padding * 2, -content_padding * 2)
+
+        # 绘制皮肤名称
+        name_color = colors['head_fill'] if is_selected else (220, 220, 220)
         name_text = self.font_manager.render_text(skin['name'], 'large', name_color)
-        name_rect = name_text.get_rect(left=option_x + 20, top=y_pos + 10)
+        name_rect = name_text.get_rect(centerx=content_rect.centerx, top=content_rect.top + 10)
         surface.blit(name_text, name_rect)
 
-        # 描述
-        desc_text = self.font_manager.render_text(skin['description'], 'medium', (180, 180, 180))
-        desc_rect = desc_text.get_rect(left=option_x + 20, top=y_pos + 40)
+        # 绘制皮肤预览
+        preview_y = name_rect.bottom + 15
+        self._draw_card_preview(surface, skin, content_rect.centerx, preview_y, is_selected)
+
+        # 绘制描述
+        desc_y = preview_y + 50
+        desc_text = self.font_manager.render_text(skin['description'], 'small', (180, 180, 180))
+        desc_rect = desc_text.get_rect(centerx=content_rect.centerx, top=desc_y)
         surface.blit(desc_text, desc_rect)
 
-        # 绘制皮肤预览
-        self._draw_skin_preview(surface, skin, option_x + 450, y_pos + 35)
+        # 绘制状态指示器
+        status_y = desc_rect.bottom + 8
+        self._draw_status_indicator(surface, skin, content_rect.centerx, status_y)
 
-    def _draw_skin_preview(self, surface, skin, x, y):
-        """绘制蛇形象预览"""
-        # 绘制蛇头
-        head_radius = 15
-        pygame.draw.circle(surface, skin['head_color'], (x, y), head_radius)
-        pygame.draw.circle(surface, skin['border_color'], (x, y), head_radius, 2)
+    def _get_skin_id_from_key(self, key):
+        """从key中提取皮肤ID"""
+        if key.startswith('snake'):
+            try:
+                return int(key[5:])  # 提取snake后面的数字
+            except ValueError:
+                return 0
+        return 0
 
-        # 绘制蛇身段
-        body_radius = 10
-        for i in range(3):
-            body_x = x - (i + 1) * 25
-            pygame.draw.circle(surface, skin['body_color'], (body_x, y), body_radius)
-            pygame.draw.circle(surface, skin['border_color'], (body_x, y), body_radius, 1)
+    def _draw_card_preview(self, surface, skin, center_x, center_y, is_selected):
+        """绘制卡片内的皮肤预览"""
+        key = skin['image_prefix']
+        skin_id = self._get_skin_id_from_key(key)
 
-        # 显示图片资源状态
-        import os
+        # 获取皮肤颜色配置
+        colors = get_snake_colors(skin_id, is_selected)  # is_selected作为加速状态
+
+        # 使用图片管理器获取蛇形象贴图（蛇头一定存在）
+        head_image = self.image_manager.get_snake_image(skin_id, "head")
+        body_image = self.image_manager.get_snake_image(skin_id, "body0")
+
+        # 缩放蛇头图片为合适大小并水平翻转（让蛇头朝向右边）
+        head_size = (60, 60)
+        scaled_head = pygame.transform.scale(head_image, head_size)
+        # 水平翻转图片，让蛇头朝向右边
+        flipped_head = pygame.transform.flip(scaled_head, True, False)
+
+        # 绘制蛇头（蛇头一定存在）
+        head_rect = flipped_head.get_rect(center=(center_x, center_y))
+        surface.blit(flipped_head, head_rect)
+
+        # 如果有蛇身图片，则使用蛇身图片
+        if body_image:
+            # 缩放蛇身图片为合适大小
+            body_size = (40, 40)
+            scaled_body = pygame.transform.scale(body_image, body_size)
+
+            # 绘制蛇身段（2个身体段）
+            for i in range(2):
+                body_x = center_x - (i + 1) * 45
+                body_rect = scaled_body.get_rect(center=(body_x, center_y))
+                surface.blit(scaled_body, body_rect)
+        else:
+            # 没有蛇身图片时使用默认圆点绘制蛇身
+            body_radius = 12 if is_selected else 10
+            for i in range(3):
+                body_x = center_x - (i + 1) * 30
+                body_color = colors['highlight'] if is_selected else colors['body_fill']
+                pygame.draw.circle(surface, body_color, (body_x, center_y), body_radius)
+                pygame.draw.circle(surface, colors['body_border'], (body_x, center_y), body_radius, 1)
+
+        # 选中状态添加发光效果
+        if is_selected:
+            glow_radius = 35
+            glow_surface = pygame.Surface((glow_radius * 2, glow_radius * 2), pygame.SRCALPHA)
+            pygame.draw.circle(glow_surface, (*colors['highlight'], 80),
+                               (glow_radius, glow_radius), glow_radius)
+            glow_rect = glow_surface.get_rect(center=(center_x, center_y))
+            surface.blit(glow_surface, glow_rect)
+
+    def _draw_status_indicator(self, surface, skin, center_x, center_y):
+        """绘制状态指示器"""
+        # 检查图片资源状态
         head_path = f"snake_game/assets/graphics/snake/{skin['image_prefix']}/{skin['image_prefix']}_head.png"
         body_path = f"snake_game/assets/graphics/snake/{skin['image_prefix']}/{skin['image_prefix']}_body0.png"
-        
+
         head_exists = os.path.exists(head_path)
         body_exists = os.path.exists(body_path)
-        
-        # 显示图片状态
-        status_text = ""
+
+        # 状态文本和颜色
         if head_exists and body_exists:
-            status_text = "图片完整"
+            status_text = "图片资源完整"
+            status_color = (100, 255, 100)
         elif head_exists:
-            status_text = "头部图片"
+            status_text = "部分图片资源"
+            status_color = (255, 200, 100)
         else:
-            status_text = "默认图形"
-            
-        status_color = (100, 255, 100) if head_exists else (255, 100, 100)
+            status_text = "使用默认图形"
+            status_color = (200, 200, 200)
+
+        # 绘制状态指示器
         status_surf = self.font_manager.render_text(status_text, 'small', status_color)
-        status_rect = status_surf.get_rect(center=(x, y + 25))
+        status_rect = status_surf.get_rect(center=(center_x, center_y))
         surface.blit(status_surf, status_rect)
 
-    def _draw_back_option(self, surface, y_pos, is_selected):
-        """绘制返回选项"""
-        color = (255, 255, 100) if is_selected else (200, 200, 200)
+    def _draw_back_button(self, surface):
+        """绘制返回按钮"""
+        # 检查鼠标是否悬停
+        mouse_pos = pygame.mouse.get_pos()
+        is_hovered = self.back_button_rect.collidepoint(mouse_pos)
 
-        if is_selected:
-            # 选中时的背景
-            back_rect = pygame.Rect(self.config.SCREEN_W // 2 - 100, y_pos - 5, 200, 40)
-            pygame.draw.rect(surface, (50, 50, 0), back_rect)
-            pygame.draw.rect(surface, color, back_rect, 2)
+        # 按钮颜色
+        if is_hovered:
+            bg_color = (60, 60, 80)
+            text_color = (255, 255, 200)
+            border_color = (255, 255, 100)
+        else:
+            bg_color = (50, 50, 60)
+            text_color = (200, 200, 200)
+            border_color = (100, 100, 120)
 
-        back_text = self.font_manager.render_text("← 返回主菜单", 'large', color)
-        back_rect = back_text.get_rect(center=(self.config.SCREEN_W // 2, y_pos + 15))
+        # 绘制按钮背景
+        pygame.draw.rect(surface, bg_color, self.back_button_rect, border_radius=8)
+        pygame.draw.rect(surface, border_color, self.back_button_rect, 2, border_radius=8)
+
+        # 绘制按钮文本
+        back_text = self.font_manager.render_text("返回主菜单", 'medium', text_color)
+        back_rect = back_text.get_rect(center=self.back_button_rect.center)
         surface.blit(back_text, back_rect)
 
     def _draw_controls_help(self, surface):
         """绘制控制提示"""
         help_texts = [
-            "↑↓ 选择皮肤    回车 确认    ESC 返回"
+            "←→↑↓ 选择卡片    回车 确认选择    ESC/B 返回"
         ]
 
         for i, text in enumerate(help_texts):
-            help_text = self.font_manager.render_text(text, 'help', (120, 120, 120))
+            help_text = self.font_manager.render_text(text, 'help', (150, 150, 150))
             help_rect = help_text.get_rect(center=(self.config.SCREEN_W // 2,
                                                    self.config.SCREEN_H - 30 - i * 25))
             surface.blit(help_text, help_rect)
@@ -212,6 +343,33 @@ class SkinSelection:
     def get_selected_skin(self):
         """获取选中的皮肤ID"""
         if self.selected_skin:
-            # 返回皮肤ID（数字）
-            return self.selected_skin.get('id', 0)
+            # 从key中提取数字ID
+            key = self.selected_skin.get('image_prefix', 'snake0')
+            if key.startswith('snake'):
+                try:
+                    return int(key[5:])  # 提取snake后面的数字
+                except ValueError:
+                    return 0
         return 0  # 默认返回snake0
+
+    def handle_mouse_event(self, event):
+        """处理鼠标事件"""
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:  # 左键点击
+            mouse_pos = pygame.mouse.get_pos()
+
+            # 检查是否点击了皮肤卡片
+            for i, (x, y) in enumerate(self.card_positions):
+                card_rect = pygame.Rect(x, y, self.card_width, self.card_height)
+                if card_rect.collidepoint(mouse_pos):
+                    self.selected_option = i
+                    self.selected_skin = self.skin_options[i]
+                    self.finished = True
+                    print(f"选择了皮肤: {self.selected_skin['name']}")
+                    return True
+
+            # 检查是否点击了返回按钮
+            if self.back_button_rect.collidepoint(mouse_pos):
+                self.finished = True
+                return True
+
+        return False
