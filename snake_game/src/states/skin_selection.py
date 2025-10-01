@@ -5,8 +5,9 @@
 import pygame
 import os
 from src.configs.config import Config
-from src.utils.font_manager import get_font_manager
 from src.configs.skin_config import get_available_skins, get_skin_by_key, get_snake_colors
+from src.configs.game_balance import GameBalance
+from src.utils.font_manager import get_font_manager
 from src.utils.image_manager import get_image_manager
 
 
@@ -243,7 +244,7 @@ class SkinSelection:
         body_image = self.image_manager.get_snake_image(skin_id, "body0")
 
         # 缩放蛇头图片为合适大小并水平翻转（让蛇头朝向右边）
-        head_size = (60, 60)
+        head_size = (GameBalance.SNAKE_HEAD_SIZE, GameBalance.SNAKE_HEAD_SIZE)
         scaled_head = pygame.transform.scale(head_image, head_size)
         # 水平翻转图片，让蛇头朝向右边
         flipped_head = pygame.transform.flip(scaled_head, True, False)
@@ -255,19 +256,19 @@ class SkinSelection:
         # 如果有蛇身图片，则使用蛇身图片
         if body_image:
             # 缩放蛇身图片为合适大小
-            body_size = (40, 40)
+            body_size = (GameBalance.SNAKE_BODY_SIZE, GameBalance.SNAKE_BODY_SIZE)
             scaled_body = pygame.transform.scale(body_image, body_size)
 
             # 绘制蛇身段（2个身体段）
             for i in range(2):
-                body_x = center_x - (i + 1) * 45
+                body_x = center_x - (i + 1) * (GameBalance.SNAKE_BODY_SIZE + 5)
                 body_rect = scaled_body.get_rect(center=(body_x, center_y))
                 surface.blit(scaled_body, body_rect)
         else:
             # 没有蛇身图片时使用默认圆点绘制蛇身
-            body_radius = 12 if is_selected else 10
+            body_radius = GameBalance.SNAKE_BODY_SIZE // 2 * (1.2 if is_selected else 1.0)
             for i in range(3):
-                body_x = center_x - (i + 1) * 30
+                body_x = center_x - (i + 1) * (GameBalance.SNAKE_BODY_SIZE)
                 body_color = colors['highlight'] if is_selected else colors['body_fill']
                 pygame.draw.circle(surface, body_color, (body_x, center_y), body_radius)
                 pygame.draw.circle(surface, colors['body_border'], (body_x, center_y), body_radius, 1)
