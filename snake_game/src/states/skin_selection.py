@@ -96,7 +96,10 @@ class SkinSelection:
             # 选择皮肤
             self.selected_skin = self.skin_options[self.selected_option]
             self.finished = True
-            print(f"选择了皮肤: {self.selected_skin['name']}")
+            # 立即保存皮肤ID到全局配置
+            skin_id = self._get_skin_id_from_key(self.selected_skin['image_prefix'])
+            self.config.set_skin_id(skin_id)
+            print(f"选择了皮肤: {self.selected_skin['name']}, 皮肤ID: {skin_id}")
         elif event_key == pygame.K_ESCAPE:
             # ESC键返回
             self.finished = True
@@ -347,9 +350,12 @@ class SkinSelection:
             key = self.selected_skin.get('image_prefix', 'snake0')
             if key.startswith('snake'):
                 try:
-                    return int(key[5:])  # 提取snake后面的数字
+                    skin_id = int(key[5:])  # 提取snake后面的数字
+                    print(f"皮肤选择返回皮肤ID: {skin_id}")
+                    return skin_id
                 except ValueError:
                     return 0
+        print("皮肤选择返回默认皮肤ID: 0")
         return 0  # 默认返回snake0
 
     def handle_mouse_event(self, event):
@@ -364,7 +370,10 @@ class SkinSelection:
                     self.selected_option = i
                     self.selected_skin = self.skin_options[i]
                     self.finished = True
-                    print(f"选择了皮肤: {self.selected_skin['name']}")
+                    # 立即保存皮肤ID到全局配置
+                    skin_id = self._get_skin_id_from_key(self.selected_skin['image_prefix'])
+                    self.config.set_skin_id(skin_id)
+                    print(f"选择了皮肤: {self.selected_skin['name']}, 皮肤ID: {skin_id}")
                     return True
 
             # 检查是否点击了返回按钮

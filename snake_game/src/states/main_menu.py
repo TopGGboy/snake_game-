@@ -72,6 +72,11 @@ class MainMenu:
 
         # 绘制当前蛇形象预览
         self._draw_snake_preview(surface)
+        
+        # 调试信息：显示当前皮肤ID
+        debug_text = self.font_manager.render_text(f"调试: 皮肤ID={self.config.get_skin_id()}", 'small', (255, 100, 100))
+        debug_rect = debug_text.get_rect(center=(self.config.SCREEN_W // 2, 550))
+        surface.blit(debug_text, debug_rect)
 
         # 绘制控制提示
         help_text = self.font_manager.render_text("使用方向键选择，回车确认", 'help', (150, 150, 150))

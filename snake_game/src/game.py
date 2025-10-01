@@ -100,6 +100,9 @@ class Game:
                     # 更新全局配置中的皮肤ID
                     self.config.set_skin_id(self.selected_skin)
                     print(f"选择了皮肤ID: {self.selected_skin}")
+                else:
+                    # 如果没有选择皮肤，使用当前配置中的皮肤ID
+                    self.selected_skin = self.config.get_skin_id()
 
                 self.state = InfiniteMode(self.selected_difficulty, self.selected_skin)
                 self.state.finished = False
@@ -119,15 +122,9 @@ class Game:
                     self.config.set_skin_id(self.selected_skin)
                     print(f"从皮肤选择返回，皮肤ID: {self.selected_skin}")
 
-                # 如果选择了皮肤，直接进入无尽模式
-                if self.selected_skin is not None:
-                    self.state = InfiniteMode(self.selected_difficulty, self.selected_skin)
-                    self.state.finished = False
-                    self.config.MAIN_MENU_FLAG = False
-                else:
-                    # 没有选择皮肤，返回主菜单
-                    self.state = MainMenu()
-                    self.state.finished = False
-                    self.config.MAIN_MENU_FLAG = True
+                # 返回主菜单
+                self.state = MainMenu()
+                self.state.finished = False
+                self.config.MAIN_MENU_FLAG = True
 
         self.state.update(self.screen, self.keys)
