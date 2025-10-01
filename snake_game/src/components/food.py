@@ -54,7 +54,7 @@ class Food(pygame.sprite.Sprite):
         """加载并处理食物图片"""
         manager = get_image_manager()
         # 从管理器获取食物图片（图片应该已经在游戏初始化时预加载了）
-        self.image = manager.get_food(self.food_name, self.size)
+        self.image = manager.get_food_image(self.food_name, self.size)
 
     def randomize_position(self, avoid_positions: Optional[List[Tuple[float, float]]] = None) -> None:
         """

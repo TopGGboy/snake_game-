@@ -39,10 +39,10 @@ class SnakeConfig:
 class Snake(pygame.sprite.Sprite):
     """优化后的蛇类"""
 
-    def __init__(self, name: str, initial_pos: Tuple[int, int] = (400, 300), skin_color: str = "default"):
+    def __init__(self, name: str, initial_pos: Tuple[int, int] = (400, 300), skin_id: int = 0):
         pygame.sprite.Sprite.__init__(self)
         self.name = name
-        self.skin_color = skin_color
+        self.skin_id = skin_id if skin_id is not None else 0  # 确保skin_id不为None
         self.config = self._load_config()
 
         # 加载图片资源
@@ -54,26 +54,39 @@ class Snake(pygame.sprite.Sprite):
         # 初始化身体段
         self._setup_body_segments()
 
-        print(f"蛇 {self.name} 初始化完成")
+        print(f"蛇 {self.name} 初始化完成，皮肤ID: {self.skin_id}")
 
     def _load_config(self) -> SnakeConfig:
         """加载蛇的配置"""
         return SnakeConfig()
 
     def _load_images(self) -> None:
-        """加载并预处理所有方向的图"""
+        """加载并预处理所有方向的图片"""
         manager = get_image_manager()
 
-        # 获取头部和身体图片（图片应该已经在游戏初始化时预加载了）
-        original_head = manager.get_snake_head(self.name, self.config.head_size)
-        # self.body_image = manager.get_snake_body(self.name, self.config.body_size)
-        self.body_image = ''
+        # 获取头部图片
+        original_head = manager.get_snake_image(self.skin_id, "head")
+        
+        # 检查是否有身体图片
+        self.has_body_images = manager.get_snake_image(self.skin_id, "body0") is not None
+        self.body_images = {}
+        
+        if self.has_body_images:
+            # 如果有身体图片，加载所有身体图片
+            for i in range(5):  # 尝试加载最多5个身体图片
+                body_img = manager.get_snake_image(self.skin_id, f"body{i}")
+                if body_img:
+                    self.body_images[i] = body_img
+                    print(f"加载蛇身图片: snake{self.skin_id}_body{i}")
+                else:
+                    break
+        else:
+            print(f"蛇 skin{self.skin_id} 没有身体图片，将使用默认绘制")
 
-        if original_head is None or self.body_image is None:
-            print(f"警告: 无法加载蛇 {self.name} 的图片，使用默认图片")
+        if original_head is None:
+            print(f"警告: 无法加载蛇 skin{self.skin_id} 的头部图片，使用默认图片")
             # 使用备用方案
             original_head = tools.create_default_image(self.config.head_size, (0, 255, 0))
-            # self.body_image = tools.create_default_image(self.config.body_size, (0, 200, 0))
 
         # 创建角度图片缓存（每15度一个，统一的图片系统）
         # 原始图片朝左（180度），所以需要调整旋转角度
@@ -83,9 +96,6 @@ class Snake(pygame.sprite.Sprite):
             rotation_angle = -(angle - 180)
             rotated_image = pygame.transform.rotate(original_head, rotation_angle)
             self.angle_images[angle] = rotated_image
-
-        print(f"图片加载完成 - 头部: {original_head.get_size()}")
-        print(f"角度图片: {len(self.angle_images)}个 (每15度)")
 
     def _setup_initial_state(self, initial_pos: Tuple[int, int]) -> None:
         """设置初始状态"""
@@ -106,8 +116,8 @@ class Snake(pygame.sprite.Sprite):
         self.normal_speed = self.config.move_speed  # 保存正常速度
         self.boost_speed = self.normal_speed * self.boost_multiplier  # 加速后的速度
 
-        # 蛇身颜色配置 - 根据皮肤选择
-        self.body_colors = self._get_skin_colors(self.skin_color)
+        # 蛇身颜色配置 - 根据皮肤ID选择
+        self.body_colors = self._get_skin_colors(self.skin_id)
         self.body_radius = self.config.body_size // 2  # 蛇身圆圈半径
 
         # 动画效果
@@ -447,7 +457,30 @@ class Snake(pygame.sprite.Sprite):
 
     def _draw_body_circle(self, surface: pygame.Surface, pos: Tuple[int, int],
                           colors: dict, radius: int, segment_index: int = 0) -> None:
-        """绘制圆形蛇身段"""
+        """绘制蛇身段 - 支持图片和默认绘制"""
+        
+        # 如果有身体图片，使用图片绘制
+        if self.has_body_images and self.body_images:
+            # 根据身体段索引选择图片（循环使用可用的图片）
+            body_img_index = segment_index % len(self.body_images)
+            if body_img_index in self.body_images:
+                body_img = self.body_images[body_img_index]
+                
+                # 加速状态下的脉动效果
+                if self.is_boosting:
+                    pulse_factor = 1.0 + 0.1 * math.sin(self.animation_time * self.pulse_speed + segment_index * 0.3)
+                    scaled_size = int(self.config.body_size * pulse_factor)
+                    # 缩放图片
+                    scaled_img = pygame.transform.scale(body_img, (scaled_size, scaled_size))
+                    img_rect = scaled_img.get_rect(center=pos)
+                    surface.blit(scaled_img, img_rect)
+                else:
+                    # 正常大小
+                    img_rect = body_img.get_rect(center=pos)
+                    surface.blit(body_img, img_rect)
+                return
+        
+        # 如果没有身体图片，使用默认绘制
         # 加速状态下的脉动效果
         if self.is_boosting:
             pulse_factor = 1.0 + 0.1 * math.sin(self.animation_time * self.pulse_speed + segment_index * 0.3)
@@ -511,10 +544,10 @@ class Snake(pygame.sprite.Sprite):
                                (int(self.position[0]), int(self.position[1])),
                                int(self.config.collision_radius), 3)
 
-    def _get_skin_colors(self, skin_color: str) -> dict:
-        """根据皮肤名称获取对应的颜色配置"""
+    def _get_skin_colors(self, skin_id: int) -> dict:
+        """根据皮肤ID获取对应的颜色配置"""
         skin_colors = {
-            "default": {
+            0: {  # snake0 - 默认皮肤
                 'normal': {
                     'fill': (255, 215, 0),  # 金黄色
                     'border': (218, 165, 32),  # 深金色边框
@@ -526,7 +559,7 @@ class Snake(pygame.sprite.Sprite):
                     'highlight': (255, 255, 224)  # 浅黄高光
                 }
             },
-            "red": {
+            1: {  # snake1 - 红色皮肤
                 'normal': {
                     'fill': (255, 0, 0),  # 红色
                     'border': (178, 34, 34),  # 深红色边框
@@ -537,57 +570,23 @@ class Snake(pygame.sprite.Sprite):
                     'border': (220, 20, 60),  # 深红色边框
                     'highlight': (255, 192, 203)  # 粉红高光
                 }
-            },
-            "blue": {
-                'normal': {
-                    'fill': (0, 0, 255),  # 蓝色
-                    'border': (0, 0, 139),  # 深蓝色边框
-                    'highlight': (173, 216, 230)  # 浅蓝高光
-                },
-                'boost': {
-                    'fill': (30, 144, 255),  # 道奇蓝
-                    'border': (0, 0, 205),  # 中蓝色边框
-                    'highlight': (135, 206, 250)  # 天蓝高光
-                }
-            },
-            "green": {
-                'normal': {
-                    'fill': (0, 255, 0),  # 绿色
-                    'border': (0, 100, 0),  # 深绿色边框
-                    'highlight': (144, 238, 144)  # 浅绿高光
-                },
-                'boost': {
-                    'fill': (50, 205, 50),  # 酸橙绿
-                    'border': (0, 128, 0),  # 绿色边框
-                    'highlight': (152, 251, 152)  # 浅绿高光
-                }
-            },
-            "purple": {
-                'normal': {
-                    'fill': (128, 0, 128),  # 紫色
-                    'border': (75, 0, 130),  # 靛蓝色边框
-                    'highlight': (216, 191, 216)  # 浅紫高光
-                },
-                'boost': {
-                    'fill': (186, 85, 211),  # 中紫色
-                    'border': (138, 43, 226),  # 紫罗兰色边框
-                    'highlight': (221, 160, 221)  # 浅紫高光
-                }
             }
         }
         
         # 如果皮肤不存在，使用默认皮肤
-        return skin_colors.get(skin_color, skin_colors["default"])
+        return skin_colors.get(skin_id, skin_colors[0])
 
-    def change_skin(self, new_skin: str) -> None:
+    def change_skin(self, new_skin_id: int) -> None:
         """更改蛇的皮肤"""
-        self.skin_color = new_skin
-        self.body_colors = self._get_skin_colors(new_skin)
-        print(f"蛇 {self.name} 皮肤已更改为: {new_skin}")
+        self.skin_id = new_skin_id
+        self.body_colors = self._get_skin_colors(new_skin_id)
+        # 重新加载图片
+        self._load_images()
+        print(f"蛇 {self.name} 皮肤已更改为: snake{new_skin_id}")
 
-    def get_available_skins(self) -> List[str]:
-        """获取可用的皮肤列表"""
-        return ["default", "red", "blue", "green", "purple"]
+    def get_available_skins(self) -> List[int]:
+        """获取可用的皮肤ID列表"""
+        return [0, 1]  # snake0 和 snake1
 
     def reset(self, initial_pos: Tuple[int, int] = (400, 300)) -> None:
         """重置蛇到初始状态"""

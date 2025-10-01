@@ -5,7 +5,6 @@ from src.components.wall import WallManager
 from src.configs.config import Config
 from src.configs.game_balance import GameBalance
 from src.configs.difficulty_loader import get_difficulty_loader
-from src.utils.image_manager import initialize_game_images
 from src.utils.grid_utils import GridUtils
 from src.utils.performance_monitor import PerformanceMonitor
 from src.utils.font_manager import get_font_manager
@@ -43,12 +42,11 @@ class InfiniteMode:
         if not self.json_config and 'key' in self.difficulty_config:
             self.json_config = self.difficulty_loader.load_difficulty_config(self.difficulty_config['key'])
 
-        # 初始化图片管理器
-        print("初始化图片管理器...")
-        initialize_game_images()
+        # 图片管理器现在由ImageManager自动处理
 
         # 创建蛇实例，应用皮肤
-        self.snake = Snake("snake0", skin_color=skin_name)
+        print(f"创建蛇实例，皮肤ID: {skin_name}")
+        self.snake = Snake("snake0", skin_id=skin_name)
 
         # 获取屏幕尺寸
         self.config = Config.get_instance()

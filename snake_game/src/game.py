@@ -93,6 +93,11 @@ class Game:
                 # 如果来自难度选择，获取选中的难度配置
                 if hasattr(self.state, 'get_selected_difficulty'):
                     self.selected_difficulty = self.state.get_selected_difficulty()
+                
+                # 如果来自皮肤选择，获取选中的皮肤ID
+                if hasattr(self.state, 'get_selected_skin'):
+                    self.selected_skin = self.state.get_selected_skin()
+                    print(f"选择了皮肤ID: {self.selected_skin}")
 
                 self.state = InfiniteMode(self.selected_difficulty, self.selected_skin)
                 self.state.finished = False

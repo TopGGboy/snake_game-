@@ -1,9 +1,11 @@
 """
-皮肤选择界面
+蛇形象选择界面
+支持选择不同的蛇形象，智能加载图片资源
 """
 import pygame
 from src.configs.config import Config
 from src.utils.font_manager import get_font_manager
+from src.configs.skin_config import get_available_skins, get_skin_by_key
 
 
 class SkinSelection:
@@ -19,8 +21,8 @@ class SkinSelection:
         # 获取字体管理器
         self.font_manager = get_font_manager()
 
-        # 预设皮肤配置
-        self.skin_options = self._load_skin_options()
+        # 蛇形象配置
+        self.skin_options = get_available_skins()
 
         self.selected_option = 0  # 当前选中的选项
         self.back_option = len(self.skin_options)  # 返回选项的索引
@@ -29,66 +31,7 @@ class SkinSelection:
         self.animation_time = 0
         self.pulse_speed = 2.0
 
-    def _load_skin_options(self):
-        """
-        加载预设皮肤选项
-        """
-        return [
-            {
-                'name': '经典绿色',
-                'key': 'classic_green',
-                'description': '传统的绿色贪吃蛇',
-                'head_color': (0, 255, 0),
-                'body_color': (0, 200, 0),
-                'border_color': (0, 150, 0),
-                'highlight_color': (150, 255, 150)
-            },
-            {
-                'name': '火焰红色',
-                'key': 'fire_red',
-                'description': '炽热的红色贪吃蛇',
-                'head_color': (255, 0, 0),
-                'body_color': (200, 0, 0),
-                'border_color': (150, 0, 0),
-                'highlight_color': (255, 150, 150)
-            },
-            {
-                'name': '海洋蓝色',
-                'key': 'ocean_blue',
-                'description': '清新的蓝色贪吃蛇',
-                'head_color': (0, 100, 255),
-                'body_color': (0, 80, 200),
-                'border_color': (0, 60, 150),
-                'highlight_color': (150, 200, 255)
-            },
-            {
-                'name': '黄金黄色',
-                'key': 'golden_yellow',
-                'description': '华丽的黄色贪吃蛇',
-                'head_color': (255, 215, 0),
-                'body_color': (218, 165, 32),
-                'border_color': (184, 134, 11),
-                'highlight_color': (255, 255, 224)
-            },
-            {
-                'name': '神秘紫色',
-                'key': 'mystic_purple',
-                'description': '神秘的紫色贪吃蛇',
-                'head_color': (128, 0, 128),
-                'body_color': (102, 0, 102),
-                'border_color': (75, 0, 130),
-                'highlight_color': (216, 191, 216)
-            },
-            {
-                'name': '冰雪白色',
-                'key': 'ice_white',
-                'description': '纯净的白色贪吃蛇',
-                'head_color': (255, 255, 255),
-                'body_color': (240, 240, 240),
-                'border_color': (200, 200, 200),
-                'highlight_color': (255, 255, 255)
-            }
-        ]
+
 
     def update_cursor(self, event_key):
         """
@@ -130,7 +73,7 @@ class SkinSelection:
         self._draw_gradient_background(surface)
 
         # 绘制标题
-        title_text = self.font_manager.render_text("选择皮肤", 'title', (255, 255, 255))
+        title_text = self.font_manager.render_text("选择蛇形象", 'title', (255, 255, 255))
         title_rect = title_text.get_rect(center=(self.config.SCREEN_W // 2, 60))
         surface.blit(title_text, title_rect)
 
@@ -205,7 +148,7 @@ class SkinSelection:
         self._draw_skin_preview(surface, skin, option_x + 450, y_pos + 35)
 
     def _draw_skin_preview(self, surface, skin, x, y):
-        """绘制皮肤预览"""
+        """绘制蛇形象预览"""
         # 绘制蛇头
         head_radius = 15
         pygame.draw.circle(surface, skin['head_color'], (x, y), head_radius)
@@ -217,6 +160,28 @@ class SkinSelection:
             body_x = x - (i + 1) * 25
             pygame.draw.circle(surface, skin['body_color'], (body_x, y), body_radius)
             pygame.draw.circle(surface, skin['border_color'], (body_x, y), body_radius, 1)
+
+        # 显示图片资源状态
+        import os
+        head_path = f"snake_game/assets/graphics/snake/{skin['image_prefix']}/{skin['image_prefix']}_head.png"
+        body_path = f"snake_game/assets/graphics/snake/{skin['image_prefix']}/{skin['image_prefix']}_body0.png"
+        
+        head_exists = os.path.exists(head_path)
+        body_exists = os.path.exists(body_path)
+        
+        # 显示图片状态
+        status_text = ""
+        if head_exists and body_exists:
+            status_text = "图片完整"
+        elif head_exists:
+            status_text = "头部图片"
+        else:
+            status_text = "默认图形"
+            
+        status_color = (100, 255, 100) if head_exists else (255, 100, 100)
+        status_surf = self.font_manager.render_text(status_text, 'small', status_color)
+        status_rect = status_surf.get_rect(center=(x, y + 25))
+        surface.blit(status_surf, status_rect)
 
     def _draw_back_option(self, surface, y_pos, is_selected):
         """绘制返回选项"""
@@ -245,5 +210,8 @@ class SkinSelection:
             surface.blit(help_text, help_rect)
 
     def get_selected_skin(self):
-        """获取选中的皮肤配置"""
-        return self.selected_skin
+        """获取选中的皮肤ID"""
+        if self.selected_skin:
+            # 返回皮肤ID（数字）
+            return self.selected_skin.get('id', 0)
+        return 0  # 默认返回snake0

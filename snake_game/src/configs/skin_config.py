@@ -1,46 +1,48 @@
 """
-皮肤配置文件
+蛇形象配置文件
+支持多种蛇形象，如果存在图片资源则使用图片，否则使用默认颜色
 """
 
-SKIN_CONFIG = {
-    "default": {
-        "name": "默认皮肤",
-        "description": "经典金黄色皮肤",
+SNAKE_SKINS = {
+    "snake0": {
+        "name": "经典小蛇",
+        "description": "传统的绿色小蛇形象",
+        "image_prefix": "snake0",
+        "head_color": (0, 255, 0),
+        "body_color": (0, 200, 0),
+        "border_color": (0, 150, 0),
+        "highlight_color": (150, 255, 150),
         "unlocked": True
     },
-    "red": {
-        "name": "红色皮肤", 
-        "description": "热情红色皮肤",
-        "unlocked": True
-    },
-    "blue": {
-        "name": "蓝色皮肤",
-        "description": "冷静蓝色皮肤", 
-        "unlocked": True
-    },
-    "green": {
-        "name": "绿色皮肤",
-        "description": "自然绿色皮肤",
-        "unlocked": True
-    },
-    "purple": {
-        "name": "紫色皮肤",
-        "description": "神秘紫色皮肤",
+    "snake1": {
+        "name": "现代大蛇",
+        "description": "带有身体图片的现代蛇形象",
+        "image_prefix": "snake1",
+        "head_color": (255, 100, 0),
+        "body_color": (200, 80, 0),
+        "border_color": (150, 60, 0),
+        "highlight_color": (255, 200, 150),
         "unlocked": True
     }
 }
 
 def get_available_skins():
-    """获取所有可用的皮肤"""
-    return list(SKIN_CONFIG.keys())
+    """获取可用的蛇形象列表"""
+    return [skin for skin in SNAKE_SKINS.values() if skin["unlocked"]]
 
-def get_skin_info(skin_name):
-    """获取皮肤信息"""
-    return SKIN_CONFIG.get(skin_name, SKIN_CONFIG["default"])
+def get_skin_by_key(key):
+    """根据key获取蛇形象配置"""
+    return SNAKE_SKINS.get(key, SNAKE_SKINS["snake0"])
 
-def is_skin_unlocked(skin_name):
-    """检查皮肤是否已解锁"""
-    skin_info = SKIN_CONFIG.get(skin_name)
-    if skin_info:
-        return skin_info["unlocked"]
-    return False
+def get_skin_keys():
+    """获取所有蛇形象的key列表"""
+    return list(SNAKE_SKINS.keys())
+
+def get_available_snake_images():
+    """获取可用的蛇形象列表（兼容旧函数名）"""
+    return get_available_skins()
+
+def get_snake_image_config(skin_id):
+    """根据皮肤ID获取蛇形象配置"""
+    key = f"snake{skin_id}"
+    return SNAKE_SKINS.get(key, SNAKE_SKINS["snake0"])
