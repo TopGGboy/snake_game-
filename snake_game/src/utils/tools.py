@@ -150,39 +150,39 @@ def extract_main_subject(image_path, colorkey=(255, 255, 255), white_threshold=2
         return None
 
 
-def normalize_to_standard_size(image, standard_size=64):
-    """将图片标准化到统一尺寸（简化版）"""
+def normalize_to_standard_size(image, standard_size=128):
+    """将图片缩放到标准尺寸，保持宽高比和内容完整性"""
     if image is None:
-        return None
+        return create_default_image(standard_size)
 
     original_width, original_height = image.get_size()
-    max_dimension = max(original_width, original_height)
     
-    if max_dimension == 0:
+    if original_width == 0 or original_height == 0:
         return create_default_image(standard_size)
     
-    # 简单的缩放比例计算
-    scale_factor = standard_size * 0.9 / max_dimension
-
+    # 计算最佳缩放比例，确保图片完全包含在标准尺寸内
+    scale_factor = min(standard_size / original_width, standard_size / original_height)
+    
+    # 计算新尺寸（至少1像素）
     new_width = max(1, int(original_width * scale_factor))
     new_height = max(1, int(original_height * scale_factor))
-
-    # 使用平滑缩放
+    
+    # 使用平滑缩放保持图像质量
     try:
         scaled_image = pygame.transform.smoothscale(image, (new_width, new_height))
     except:
         scaled_image = pygame.transform.scale(image, (new_width, new_height))
-
-    standard_image = pygame.Surface((standard_size, standard_size), pygame.SRCALPHA)
-    standard_image.fill((0, 0, 0, 0))
-
-    # 居中放置
+    
+    # 创建标准尺寸的透明画布
+    result_image = pygame.Surface((standard_size, standard_size), pygame.SRCALPHA)
+    result_image.fill((0, 0, 0, 0))
+    
+    # 居中放置缩放后的图片
     x_offset = (standard_size - new_width) // 2
     y_offset = (standard_size - new_height) // 2
-
-    standard_image.blit(scaled_image, (x_offset, y_offset))
+    result_image.blit(scaled_image, (x_offset, y_offset))
     
-    return standard_image
+    return result_image
 
 
 def create_default_image(size, color=(255, 0, 0)):
@@ -193,17 +193,102 @@ def create_default_image(size, color=(255, 0, 0)):
     return image
 
 
-def process_game_image(image_path, target_size=32, colorkey=(255, 255, 255), standard_size=64):
-    """完整的图片处理流程（简化版）"""
-    main_subject = extract_main_subject(image_path, colorkey)
-    
-    if main_subject is None:
+def standardize_image_processing(image_path, target_size=32, colorkey=(255, 255, 255), standard_size=128):
+    """标准化图片处理流程：提取主题 → 缩放到统一大小 → 透明化背景 → 缩放到目标大小"""
+    try:
+        # 1. 提取主题（白色背景透明化）
+        main_subject = extract_main_subject(image_path, colorkey)
+        
+        if main_subject is None:
+            return create_default_image(target_size)
+        
+        # 2. 缩放到统一标准尺寸（保持宽高比）
+        standardized_image = normalize_to_standard_size(main_subject, standard_size)
+        
+        # 3. 进一步优化透明化处理（处理残留白边）
+        optimized_image = optimize_transparency(standardized_image, colorkey)
+        
+        # 4. 缩放到最终目标尺寸
+        final_image = pygame.transform.smoothscale(optimized_image, (target_size, target_size))
+        
+        return final_image 
+        
+    except Exception as e:
+        print(f"图片处理失败 {image_path}: {e}")
         return create_default_image(target_size)
+
+
+def optimize_transparency(image, colorkey=(255, 255, 255), white_threshold=230):
+    """优化透明度处理，去除残留白边"""
+    width, height = image.get_size()
+    result_image = image.copy()
     
-    # 直接缩放到目标尺寸，不再进行标准化
-    return pygame.transform.scale(main_subject, (target_size, target_size))
+    for x in range(width):
+        for y in range(height):
+            pixel = image.get_at((x, y))
+            
+            if len(pixel) >= 3:
+                r, g, b = pixel[0], pixel[1], pixel[2]
+                alpha = pixel[3] if len(pixel) == 4 else 255
+                
+                # 检测接近白色的像素
+                if r > white_threshold and g > white_threshold and b > white_threshold:
+                    # 如果是接近白色的像素，设为完全透明
+                    result_image.set_at((x, y), (0, 0, 0, 0))
+                elif alpha > 0:
+                    # 对于非透明像素，确保不是白色背景
+                    color_distance = ((r - colorkey[0]) ** 2 + 
+                                     (g - colorkey[1]) ** 2 + 
+                                     (b - colorkey[2]) ** 2) ** 0.5
+                    
+                    # 如果颜色与背景色太接近，降低透明度
+                    if color_distance < 30:
+                        new_alpha = max(0, alpha - int(30 - color_distance))
+                        result_image.set_at((x, y), (r, g, b, new_alpha))
+    
+    return result_image
+
+
+def process_game_image(image_path, target_size=32, colorkey=(255, 255, 255), standard_size=128):
+    """完整的图片处理流程（标准化版本）"""
+    return standardize_image_processing(image_path, target_size, colorkey, standard_size)
 
 
 def process_snake_image(image_path, colorkey=(255, 255, 255), target_size=32):
     """处理蛇的图片（向后兼容）"""
-    return process_game_image(image_path, target_size, colorkey)
+    return standardize_image_processing(image_path, target_size, colorkey)
+
+
+def batch_process_images(image_paths, target_sizes=None, colorkey=(255, 255, 255)):
+    """批量处理图片，支持不同目标尺寸"""
+    if target_sizes is None:
+        target_sizes = [32] * len(image_paths)
+    
+    processed_images = {}
+    
+    for i, image_path in enumerate(image_paths):
+        target_size = target_sizes[i] if i < len(target_sizes) else 32
+        processed_images[image_path] = standardize_image_processing(
+            image_path, target_size, colorkey
+        )
+    
+    return processed_images
+
+
+def get_image_dimensions(image_path):
+    """获取图片原始尺寸信息"""
+    try:
+        image = pygame.image.load(image_path)
+        return image.get_size()
+    except:
+        return (0, 0)
+
+
+def get_image_processing_info(image_path):
+    """获取图片处理信息"""
+    original_size = get_image_dimensions(image_path)
+    return {
+        "original_size": original_size,
+        "standard_size": 128,
+        "processing_steps": ["主题提取", "标准化缩放", "透明化优化", "目标缩放"]
+    }
