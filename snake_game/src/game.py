@@ -97,6 +97,8 @@ class Game:
                 # 如果来自皮肤选择，获取选中的皮肤ID
                 if hasattr(self.state, 'get_selected_skin'):
                     self.selected_skin = self.state.get_selected_skin()
+                    # 更新全局配置中的皮肤ID
+                    self.config.set_skin_id(self.selected_skin)
                     print(f"选择了皮肤ID: {self.selected_skin}")
 
                 self.state = InfiniteMode(self.selected_difficulty, self.selected_skin)
@@ -113,6 +115,8 @@ class Game:
                 # 返回主菜单（从皮肤选择返回时）
                 if hasattr(self.state, 'get_selected_skin'):
                     self.selected_skin = self.state.get_selected_skin()
+                    # 更新全局配置中的皮肤ID
+                    self.config.set_skin_id(self.selected_skin)
                     print(f"从皮肤选择返回，皮肤ID: {self.selected_skin}")
 
                 # 如果选择了皮肤，直接进入无尽模式

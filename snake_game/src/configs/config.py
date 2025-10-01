@@ -17,7 +17,7 @@ class Config:
         # 是否在游戏主界面
         self.MAIN_MENU_FLAG = True
         # 皮肤设置
-        self.skin = "default"  # 当前选择的皮肤
+        self.skin_id = 0  # 当前选择的皮肤ID（整数）
 
     @classmethod
     def get_instance(cls):
@@ -29,10 +29,10 @@ class Config:
             cls._instance = cls()
         return cls._instance
 
-    def set_skin(self, skin_name: str):
-        """设置当前皮肤"""
-        self.skin = skin_name
+    def set_skin_id(self, skin_id: int):
+        """设置当前皮肤ID"""
+        self.skin_id = skin_id
 
-    def get_skin(self) -> str:
-        """获取当前皮肤"""
-        return self.skin
+    def get_skin_id(self) -> int:
+        """获取当前皮肤ID"""
+        return self.skin_id
