@@ -6,6 +6,7 @@ from src.configs.config import Config
 from src.states.main_menu import MainMenu
 from src.states.difficulty_selection import DifficultySelection
 from src.states.infinite_mode import InfiniteMode
+from src.states.skin_selection import SkinSelection
 
 
 class Game:
@@ -29,6 +30,7 @@ class Game:
 
         self.return_home_flage = False  # 返回主菜单标志
         self.selected_difficulty = None  # 存储选中的难度配置
+        self.selected_skin = None  # 存储选中的皮肤配置
 
     def run(self):
         """
@@ -92,8 +94,23 @@ class Game:
                 if hasattr(self.state, 'get_selected_difficulty'):
                     self.selected_difficulty = self.state.get_selected_difficulty()
 
-                self.state = InfiniteMode(self.selected_difficulty)
+                self.state = InfiniteMode(self.selected_difficulty, self.selected_skin)
                 self.state.finished = False
                 self.config.MAIN_MENU_FLAG = False
+
+            elif self.next_state == "skin_selection":
+                # 进入皮肤选择
+                self.state = SkinSelection()
+                self.state.finished = False
+                self.config.MAIN_MENU_FLAG = True  # 保持菜单模式用于键盘导航
+
+            elif self.next_state == "main_menu":
+                # 返回主菜单（从皮肤选择返回时）
+                if hasattr(self.state, 'get_selected_skin'):
+                    self.selected_skin = self.state.get_selected_skin()
+
+                self.state = MainMenu()
+                self.state.finished = False
+                self.config.MAIN_MENU_FLAG = True
 
         self.state.update(self.screen, self.keys)

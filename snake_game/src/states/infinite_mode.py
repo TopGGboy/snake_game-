@@ -14,10 +14,11 @@ from ..states.game_over_menu import GameOverMenu
 
 
 class InfiniteMode:
-    def __init__(self, difficulty_config=None):
+    def __init__(self, difficulty_config=None, skin_name=None):
         """
         初始化无尽模式
         :param difficulty_config: 难度配置字典
+        :param skin_name: 皮肤名称
         """
 
         self.finished = False
@@ -46,7 +47,8 @@ class InfiniteMode:
         print("初始化图片管理器...")
         initialize_game_images()
 
-        self.snake = Snake("snake0")  # 创建蛇实例
+        # 创建蛇实例，应用皮肤
+        self.snake = Snake("snake0", skin_color=skin_name)
 
         # 获取屏幕尺寸
         self.config = Config.get_instance()

@@ -19,7 +19,7 @@ class MainMenu:
         self.font_manager = get_font_manager()
 
         # 菜单选项
-        self.menu_options = ["无尽模式", "退出"]
+        self.menu_options = ["无尽模式", "选择皮肤", "退出"]
         self.selected_option = 0  # 当前选中的选项
 
     def update_cursor(self, event_key):
@@ -34,7 +34,10 @@ class MainMenu:
             if self.selected_option == 0:  # 开始游戏
                 self.finished = True
                 self.config.MAIN_MENU_FLAG = False
-            elif self.selected_option == 1:  # 退出
+            elif self.selected_option == 1:  # 选择皮肤
+                self.finished = True
+                self.next = "skin_selection"
+            elif self.selected_option == 2:  # 退出
                 pygame.quit()
                 quit()
 

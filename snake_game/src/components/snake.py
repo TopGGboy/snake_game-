@@ -39,9 +39,10 @@ class SnakeConfig:
 class Snake(pygame.sprite.Sprite):
     """优化后的蛇类"""
 
-    def __init__(self, name: str, initial_pos: Tuple[int, int] = (400, 300)):
+    def __init__(self, name: str, initial_pos: Tuple[int, int] = (400, 300), skin_color: str = "default"):
         pygame.sprite.Sprite.__init__(self)
         self.name = name
+        self.skin_color = skin_color
         self.config = self._load_config()
 
         # 加载图片资源
@@ -105,19 +106,8 @@ class Snake(pygame.sprite.Sprite):
         self.normal_speed = self.config.move_speed  # 保存正常速度
         self.boost_speed = self.normal_speed * self.boost_multiplier  # 加速后的速度
 
-        # 蛇身颜色配置
-        self.body_colors = {
-            'normal': {
-                'fill': (255, 215, 0),  # 金黄色（如图片）
-                'border': (218, 165, 32),  # 深金色边框
-                'highlight': (255, 255, 224)  # 浅黄高光
-            },
-            'boost': {
-                'fill': (255, 215, 0),  # 金黄色
-                'border': (255, 140, 0),  # 深橙色边框
-                'highlight': (255, 255, 224)  # 浅黄高光
-            }
-        }
+        # 蛇身颜色配置 - 根据皮肤选择
+        self.body_colors = self._get_skin_colors(self.skin_color)
         self.body_radius = self.config.body_size // 2  # 蛇身圆圈半径
 
         # 动画效果
@@ -520,6 +510,84 @@ class Snake(pygame.sprite.Sprite):
             pygame.draw.circle(surface, (255, 0, 0),
                                (int(self.position[0]), int(self.position[1])),
                                int(self.config.collision_radius), 3)
+
+    def _get_skin_colors(self, skin_color: str) -> dict:
+        """根据皮肤名称获取对应的颜色配置"""
+        skin_colors = {
+            "default": {
+                'normal': {
+                    'fill': (255, 215, 0),  # 金黄色
+                    'border': (218, 165, 32),  # 深金色边框
+                    'highlight': (255, 255, 224)  # 浅黄高光
+                },
+                'boost': {
+                    'fill': (255, 215, 0),  # 金黄色
+                    'border': (255, 140, 0),  # 深橙色边框
+                    'highlight': (255, 255, 224)  # 浅黄高光
+                }
+            },
+            "red": {
+                'normal': {
+                    'fill': (255, 0, 0),  # 红色
+                    'border': (178, 34, 34),  # 深红色边框
+                    'highlight': (255, 182, 193)  # 浅粉高光
+                },
+                'boost': {
+                    'fill': (255, 69, 0),  # 橙红色
+                    'border': (220, 20, 60),  # 深红色边框
+                    'highlight': (255, 192, 203)  # 粉红高光
+                }
+            },
+            "blue": {
+                'normal': {
+                    'fill': (0, 0, 255),  # 蓝色
+                    'border': (0, 0, 139),  # 深蓝色边框
+                    'highlight': (173, 216, 230)  # 浅蓝高光
+                },
+                'boost': {
+                    'fill': (30, 144, 255),  # 道奇蓝
+                    'border': (0, 0, 205),  # 中蓝色边框
+                    'highlight': (135, 206, 250)  # 天蓝高光
+                }
+            },
+            "green": {
+                'normal': {
+                    'fill': (0, 255, 0),  # 绿色
+                    'border': (0, 100, 0),  # 深绿色边框
+                    'highlight': (144, 238, 144)  # 浅绿高光
+                },
+                'boost': {
+                    'fill': (50, 205, 50),  # 酸橙绿
+                    'border': (0, 128, 0),  # 绿色边框
+                    'highlight': (152, 251, 152)  # 浅绿高光
+                }
+            },
+            "purple": {
+                'normal': {
+                    'fill': (128, 0, 128),  # 紫色
+                    'border': (75, 0, 130),  # 靛蓝色边框
+                    'highlight': (216, 191, 216)  # 浅紫高光
+                },
+                'boost': {
+                    'fill': (186, 85, 211),  # 中紫色
+                    'border': (138, 43, 226),  # 紫罗兰色边框
+                    'highlight': (221, 160, 221)  # 浅紫高光
+                }
+            }
+        }
+        
+        # 如果皮肤不存在，使用默认皮肤
+        return skin_colors.get(skin_color, skin_colors["default"])
+
+    def change_skin(self, new_skin: str) -> None:
+        """更改蛇的皮肤"""
+        self.skin_color = new_skin
+        self.body_colors = self._get_skin_colors(new_skin)
+        print(f"蛇 {self.name} 皮肤已更改为: {new_skin}")
+
+    def get_available_skins(self) -> List[str]:
+        """获取可用的皮肤列表"""
+        return ["default", "red", "blue", "green", "purple"]
 
     def reset(self, initial_pos: Tuple[int, int] = (400, 300)) -> None:
         """重置蛇到初始状态"""

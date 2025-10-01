@@ -18,14 +18,21 @@ class Food(pygame.sprite.Sprite):
     # 类级别的调试开关
     DEBUG_COLLISION = False
 
-    def __init__(self, food_name: str = "food0", size: int = None):
+    def __init__(self, food_name: str = None, size: int = None):
         pygame.sprite.Sprite.__init__(self)
-        self.food_name = food_name
-        self.size = size if size is not None else GameBalance.FOOD_SIZE
+
+        # 随机选择食物类型或使用指定的类型
+        self.food_name = food_name if food_name else GameBalance.get_random_food_type()
+
+        # 获取食物配置
+        food_config = GameBalance.get_food_config(self.food_name)
+
+        self.size = size if size is not None else food_config["size"]
         self.config = Config.get_instance()
 
         # 食物属性（需要在位置生成前设置）
-        self.score_value = GameBalance.FOOD_SCORE_VALUE
+        self.score_value = food_config["score_value"]
+        self.display_name = food_config["name"]
         self.is_eaten = False
 
         # 碰撞检测半径（圆形碰撞，更适合顺滑移动）
@@ -40,7 +47,8 @@ class Food(pygame.sprite.Sprite):
         self.position = [0.0, 0.0]  # 使用浮点坐标支持顺滑移动
         self.randomize_position()
 
-        print(f"食物 {self.food_name} 创建完成，尺寸: {self.image.get_size()}")
+        print(
+            f"食物 {self.display_name}({self.food_name}) 创建完成，尺寸: {self.image.get_size()}，分数: {self.score_value}")
 
     def _load_image(self) -> None:
         """加载并处理食物图片"""
@@ -134,14 +142,6 @@ class Food(pygame.sprite.Sprite):
 
         return is_collision
 
-    def check_collision_rect(self, snake_head_rect: pygame.Rect) -> bool:
-        """
-        兼容性方法：使用矩形碰撞检测（为了向后兼容）
-        :param snake_head_rect: 蛇头的矩形
-        :return: 是否发生碰撞
-        """
-        return self.rect.colliderect(snake_head_rect)
-
     def get_eaten(self) -> int:
         """
         食物被吃掉
@@ -152,11 +152,29 @@ class Food(pygame.sprite.Sprite):
 
     def reset(self, avoid_positions: Optional[List[Tuple[int, int]]] = None) -> None:
         """
-        重置食物状态
+        重置食物状态，包括重新随机选择食物类型
         :param avoid_positions: 要避免的位置列表
         """
+        # 重新随机选择食物类型
+        self.food_name = GameBalance.get_random_food_type()
+        food_config = GameBalance.get_food_config(self.food_name)
+
+        # 更新食物属性
+        self.size = food_config["size"]
+        self.score_value = food_config["score_value"]
+        self.display_name = food_config["name"]
+
+        # 重新加载图片
+        self._load_image()
+
+        # 重置状态和位置
         self.is_eaten = False
+        self.collision_radius = self.size * 0.5
+        self.rect = self.image.get_rect()
         self.randomize_position(avoid_positions)
+
+        print(
+            f"食物重置为 {self.display_name}({self.food_name})，尺寸: {self.image.get_size()}，分数: {self.score_value}")
 
     def get_position(self) -> Tuple[float, float]:
         """获取食物中心位置（浮点坐标）"""
@@ -224,7 +242,7 @@ class FoodManager:
             collision_detected = False
             if snake_head_pos:
                 collision_detected = food.check_collision(snake_head_pos)
-    
+
             if collision_detected and not food.is_eaten:  # 确保食物没有被重复吃掉
                 score_gained += food.get_eaten()
                 self.score += score_gained
@@ -235,7 +253,7 @@ class FoodManager:
                     avoid_positions.append(snake_head_pos)
                 food.reset(avoid_positions)
 
-                print(f"吃到食物！获得 {food.score_value} 分，总分: {self.score}")
+                print(f"吃到{food.display_name}！获得 {food.score_value} 分，总分: {self.score}")
 
         return score_gained
 

@@ -15,7 +15,6 @@ class GameBalance:
 
     # 食物配置
     FOOD_SIZE = 25  # 食物尺寸
-    FOOD_SCORE_VALUE = 10  # 食物分数
     MAX_FOOD_COUNT = 1  # 同时存在的食物数量
     FOOD_GENERATION_PIXEL = 8  # 食物生成时的边缘留白网格数
 
@@ -32,6 +31,35 @@ class GameBalance:
     SMOOTH_TURNING_ENABLED = True  # 启用平滑转向
 
     SMOOTH_BOOST_MULTIPLIER = 2.0  # 加速倍数
+
+    # 食物类型配置
+    FOOD_TYPES = {
+        "food0": {  # 苹果
+            "name": "苹果",
+            "score_value": 10,
+            "size": 25,
+            "weight": 0.7  # 生成权重
+        },
+        "food1": {  # 西瓜
+            "name": "西瓜",
+            "score_value": 20,
+            "size": 30,
+            "weight": 0.3  # 生成权重
+        }
+    }
+
+    @classmethod
+    def get_food_config(cls, food_name: str):
+        """获取食物配置"""
+        return cls.FOOD_TYPES.get(food_name, cls.FOOD_TYPES["food0"])
+
+    @classmethod
+    def get_random_food_type(cls):
+        """根据权重随机选择食物类型"""
+        import random
+        food_types = list(cls.FOOD_TYPES.keys())
+        weights = [cls.FOOD_TYPES[food]["weight"] for food in food_types]
+        return random.choices(food_types, weights=weights, k=1)[0]
 
     @classmethod
     def calculate_speed_increase(cls, score: int) -> int:
