@@ -206,8 +206,9 @@ class LevelMode:
             self.level_completed = True
             self.show_level_loading = True
 
-            # TODO : 在游戏胜利跳入下一关前，先给出游戏胜利界面，跳转到暂停界面（不过暂停界面的标题是游戏胜利，而不是暂停）因为游戏胜利界面和暂停界面的功能相同
-            self._go_to_next_level()
+            # 游戏胜利，切换到胜利界面（使用暂停界面，但标题改为游戏胜利）
+            self.state_manager.set_state(self.state_manager.STATE_LEVEL_COMPLETE)
+            self.state_manager.level_pause_menu.set_level_info(self.current_level_index + 1, len(self.available_levels))
             print(f"关卡完成！得分: {self.score}, 目标分数: {self.target_score}")
 
         # 更新状态管理器

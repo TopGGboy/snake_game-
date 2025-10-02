@@ -77,6 +77,9 @@ class LevelStateManager:
             self.level_pause_menu.update(surface, keys)
         elif self.current_state == self.STATE_GAME_OVER:
             self.level_game_over.update(surface, keys)
+        elif self.current_state == self.STATE_LEVEL_COMPLETE:
+            # 关卡完成状态也使用暂停界面来更新
+            self.level_pause_menu.update(surface, keys)
     
     def draw(self, surface):
         """绘制界面 - 根据当前状态绘制对应的界面"""
@@ -86,6 +89,9 @@ class LevelStateManager:
             self.level_pause_menu.draw(surface)
         elif self.current_state == self.STATE_GAME_OVER:
             self.level_game_over.draw(surface)
+        elif self.current_state == self.STATE_LEVEL_COMPLETE:
+            # 关卡完成状态也使用暂停界面来绘制
+            self.level_pause_menu.draw(surface)
     
     def _handle_loading_event(self, event):
         """处理加载界面事件"""
@@ -142,10 +148,28 @@ class LevelStateManager:
                     self.set_state(self.STATE_PAUSE)
     
     def _handle_level_complete_event(self, event):
-        """处理关卡完成事件"""
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_RETURN or event.key == pygame.K_SPACE:
+        """处理关卡完成事件 - 使用暂停界面显示游戏胜利"""
+        # 设置暂停界面为胜利模式
+        self.level_pause_menu.set_victory_mode(True)
+        
+        # 处理暂停界面事件
+        self.level_pause_menu.handle_event(event)
+        if self.level_pause_menu.is_finished():
+            action = self.level_pause_menu.get_action()
+            if action == 'resume' or action == 'next_level':
+                # 继续游戏或下一关都跳转到下一关
                 self.level_mode._go_to_next_level()
+            elif action == 'restart':
+                self.level_mode.restart_game()
+                self.set_state(self.STATE_GAME)
+            elif action == 'previous_level':
+                self.level_mode._go_to_previous_level()
+            elif action == 'main_menu':
+                self.level_mode.finished = True
+                self.level_mode.next = 'main_menu'
+            elif action == 'quit':
+                pygame.quit()
+                quit()
     
     def is_in_interface_state(self):
         """检查是否处于界面状态（非游戏状态）"""

@@ -7,7 +7,7 @@ from src.utils.font_manager import get_font_manager
 
 
 class LevelPauseMenu:
-    def __init__(self, screen_width=None, screen_height=None, game_state=None, current_level=1, total_levels=10):
+    def __init__(self, screen_width=None, screen_height=None, game_state=None, current_level=1, total_levels=10, is_victory=False):
         """
         初始化关卡暂停界面
         :param screen_width: 屏幕宽度
@@ -15,6 +15,7 @@ class LevelPauseMenu:
         :param game_state: 当前游戏状态
         :param current_level: 当前关卡
         :param total_levels: 总关卡数
+        :param is_victory: 是否为胜利界面
         """
         self.config = Config.get_instance()
         self.font_manager = get_font_manager()
@@ -29,6 +30,9 @@ class LevelPauseMenu:
         
         # 游戏状态
         self.game_state = game_state
+        
+        # 界面类型（暂停/胜利）
+        self.is_victory = is_victory
         
         # 菜单选项
         self.menu_options = [
@@ -146,7 +150,8 @@ class LevelPauseMenu:
         surface.blit(overlay, (0, 0))
         
         # 绘制标题
-        title_text = self.font_manager.render_text("游戏暂停", 'title', (255, 255, 255))
+        title = "游戏胜利" if self.is_victory else "游戏暂停"
+        title_text = self.font_manager.render_text(title, 'title', (255, 255, 255))
         title_rect = title_text.get_rect(center=(self.screen_width // 2, 100))
         surface.blit(title_text, title_rect)
         
@@ -265,6 +270,10 @@ class LevelPauseMenu:
         """设置关卡信息"""
         self.current_level = current_level
         self.total_levels = total_levels
+
+    def set_victory_mode(self, is_victory=True):
+        """设置是否为胜利模式"""
+        self.is_victory = is_victory
 
     def reset(self):
         """重置界面状态"""
