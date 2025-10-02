@@ -187,6 +187,9 @@ class LevelMode:
             # 游戏暂停，切换到暂停状态
             self.state_manager.set_state(self.state_manager.STATE_PAUSE)
             self.state_manager.level_pause_menu.set_level_info(self.current_level_index + 1, len(self.available_levels))
+        elif not self.paused and self.state_manager.get_current_state() == self.state_manager.STATE_PAUSE:
+            # 如果暂停状态被取消，确保状态管理器也回到游戏状态
+            self.state_manager.set_state(self.state_manager.STATE_GAME)
 
     def update(self, surface, keys):
         """
@@ -214,8 +217,8 @@ class LevelMode:
         # 更新状态管理器
         self.state_manager.update(surface, keys)
 
-        # 如果处于界面状态，不更新游戏逻辑
-        if self.state_manager.is_in_interface_state():
+        # 如果处于界面状态或游戏暂停，不更新游戏逻辑
+        if self.state_manager.is_in_interface_state() or self.paused:
             # 如果游戏暂停，暂停时更新last_time，防止恢复时时间跳跃
             if self.paused:
                 self.last_time = pygame.time.get_ticks()
@@ -224,9 +227,6 @@ class LevelMode:
         # 如果关卡完成，显示完成界面
         if self.level_completed:
             self._draw_level_complete(surface)
-        # 如果游戏暂停，暂停时更新last_time，防止恢复时时间跳跃
-        elif self.paused:
-            self.last_time = pygame.time.get_ticks()
         elif not self.game_over:
             # 计算时间增量
             current_time = pygame.time.get_ticks()

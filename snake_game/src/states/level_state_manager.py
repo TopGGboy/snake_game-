@@ -44,9 +44,12 @@ class LevelStateManager:
             old_state = self.current_state
             self.current_state = new_state
             
-            # 重置相关界面
+            # 同步游戏状态
             if new_state == self.STATE_PAUSE:
+                self.level_mode.paused = True
                 self.level_pause_menu.reset()
+            elif new_state == self.STATE_GAME:
+                self.level_mode.paused = False
             elif new_state == self.STATE_LOADING:
                 self.level_loading.reset()
             elif new_state == self.STATE_GAME_OVER:
@@ -105,6 +108,8 @@ class LevelStateManager:
         if self.level_pause_menu.is_finished():
             action = self.level_pause_menu.get_action()
             if action == 'resume':
+                # 恢复游戏时，确保暂停状态被清除
+                self.level_mode.paused = False
                 self.set_state(self.STATE_GAME)
             elif action == 'restart':
                 self.level_mode.restart_game()
@@ -144,7 +149,7 @@ class LevelStateManager:
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE or event.key == pygame.K_p:
                 # ESC或P键暂停游戏
-                if not self.level_mode.game_over:
+                if not self.level_mode.game_over and not self.level_mode.level_completed:
                     self.set_state(self.STATE_PAUSE)
     
     def _handle_level_complete_event(self, event):
