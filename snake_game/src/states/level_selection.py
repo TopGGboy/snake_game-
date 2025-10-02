@@ -92,7 +92,7 @@ class LevelSelection(BaseState):
                     # 选择当前关卡，直接跳转到关卡模式
                     self.selected_level = self.levels[self.selected_index]
                     self.finished = True
-                    self.next = "level_mode"
+                    self.next = f"level_mode:{self.selected_level['file_name'].replace('.json', '')}"
 
                     # 保存关卡信息到全局配置
                     self.config.set_selected_level(self.selected_level)

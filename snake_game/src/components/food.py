@@ -79,19 +79,28 @@ class Food(pygame.sprite.Sprite):
             y = random.uniform(min_y, max_y)
             position = (x, y)
 
-            # 检查是否与避免位置冲突
-            if not self._is_position_occupied(position, avoid_positions):
+            # 检查是否与避免位置冲突，并且离墙壁足够远
+            if (not self._is_position_occupied(position, avoid_positions) and 
+                self._is_position_away_from_walls(position)):
                 self.position = [x, y]
                 self.rect.center = (int(x), int(y))
-                print(f"食物生成在位置: ({x:.1f}, {y:.1f})")
+                print(f"食物生成在位置: ({x:.1f}, {y:.1f}) - 距离墙壁安全")
                 return
 
-        # 如果找不到合适位置，使用屏幕中心
+        # 如果找不到合适位置，使用屏幕中心（确保中心位置安全）
         center_x = self.config.SCREEN_W / 2
         center_y = self.config.SCREEN_H / 2
-        self.position = [center_x, center_y]
-        self.rect.center = (int(center_x), int(center_y))
-        print(f"警告: 无法找到合适的食物位置，使用屏幕中心: ({center_x}, {center_y})")
+        if self._is_position_away_from_walls((center_x, center_y)):
+            self.position = [center_x, center_y]
+            self.rect.center = (int(center_x), int(center_y))
+            print(f"警告: 无法找到合适的食物位置，使用屏幕中心: ({center_x}, {center_y})")
+        else:
+            # 如果中心也不安全，强制使用安全位置
+            safe_x = max(min_x, min(max_x, center_x))
+            safe_y = max(min_y, min(max_y, center_y))
+            self.position = [safe_x, safe_y]
+            self.rect.center = (int(safe_x), int(safe_y))
+            print(f"警告: 强制使用安全位置: ({safe_x:.1f}, {safe_y:.1f})")
 
     def _is_position_occupied(self, position: Tuple[float, float], avoid_positions: List[Tuple[float, float]]) -> bool:
         """
@@ -108,6 +117,27 @@ class Food(pygame.sprite.Sprite):
             if distance < safe_distance:
                 return True
         return False
+
+    def _is_position_away_from_walls(self, position: Tuple[float, float]) -> bool:
+        """
+        检查位置是否离墙壁足够远
+        :param position: 要检查的位置
+        :return: 是否离墙壁安全距离
+        """
+        x, y = position
+        margin = GameBalance.FOOD_GENERATION_PIXEL
+        
+        # 检查距离四个墙壁的距离
+        distance_to_left = x
+        distance_to_right = self.config.SCREEN_W - x
+        distance_to_top = y
+        distance_to_bottom = self.config.SCREEN_H - y
+        
+        # 确保距离所有墙壁都大于边距
+        min_distance = min(distance_to_left, distance_to_right, distance_to_top, distance_to_bottom)
+        
+        # 返回是否满足最小安全距离要求
+        return min_distance >= margin
 
     def _calculate_distance(self, pos1: Tuple[float, float], pos2: Tuple[float, float]) -> float:
         """计算两点之间的距离"""

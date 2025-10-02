@@ -11,8 +11,10 @@ from ..configs.level_loader import get_level_loader
 from ..utils.grid_utils import GridUtils
 from ..utils.performance_monitor import PerformanceMonitor
 from ..utils.font_manager import get_font_manager
-from .pause_menu import PauseMenu
-from .game_over_menu import GameOverMenu
+from .level_loading import LevelLoadingScreen
+from .level_pause_menu import LevelPauseMenu
+from .level_game_over import LevelGameOverMenu
+from .level_state_manager import LevelStateManager
 
 
 class LevelMode:
@@ -24,11 +26,11 @@ class LevelMode:
         self.finished = False
         self.next = None
         self.level_name = level_name
-        
+
         # 获取关卡加载器
         self.level_loader = get_level_loader()
         self.level_config = self.level_loader.load_level_config(level_name)
-        
+
         if not self.level_config:
             # 如果关卡加载失败，使用默认配置
             self.level_config = self._get_default_level_config()
@@ -57,11 +59,12 @@ class LevelMode:
         self.wall_manager = WallManager()
         self._setup_walls()
 
-        # 创建暂停菜单实例
-        self.pause_menu = PauseMenu(game_state=self)
-        
-        # 创建游戏结束菜单实例
-        self.game_over_menu = GameOverMenu(game_state=self)
+        # 关卡导航相关属性
+        self.available_levels = self._get_available_levels()
+        self.current_level_index = self._get_current_level_index()
+
+        # 创建状态管理器
+        self.state_manager = LevelStateManager(self, self.screen_width, self.screen_height)
 
         # 游戏统计
         self.score = 0
@@ -86,6 +89,31 @@ class LevelMode:
 
         print(f"关卡模式初始化完成 - 关卡: {self.level_config.get('name', '未知')}, 目标分数: {self.target_score}")
 
+    def _get_available_levels(self):
+        """获取所有可用的关卡"""
+        levels_dir = "./src/configs/level"
+        available_levels = []
+
+        # 检查关卡目录是否存在
+        if os.path.exists(levels_dir):
+            for file in os.listdir(levels_dir):
+                if file.startswith('level_') and file.endswith('.json'):
+                    level_name = file.replace('.json', '')
+                    available_levels.append(level_name)
+
+        # 如果没有找到关卡文件，返回默认关卡列表
+        if not available_levels:
+            available_levels = ['level_01', 'level_02', 'level_03']
+
+        return sorted(available_levels)
+
+    def _get_current_level_index(self):
+        """获取当前关卡在可用关卡列表中的索引"""
+        for i, level in enumerate(self.available_levels):
+            if level == self.level_name:
+                return i
+        return 0
+
     def _get_default_level_config(self):
         """获取默认关卡配置"""
         return {
@@ -105,8 +133,6 @@ class LevelMode:
                 'self_collision': True
             }
         }
-
-
 
     def _apply_level_config(self):
         """应用关卡配置到游戏参数"""
@@ -145,62 +171,22 @@ class LevelMode:
         处理pygame事件
         :param event: pygame事件
         """
-        if self.level_completed:
-            # 关卡完成，显示完成界面
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_RETURN or event.key == pygame.K_SPACE:
-                    self.finished = True
-                    self.next = 'main_menu'
-        elif self.game_over:
-            # 如果游戏结束，将事件传递给游戏结束菜单
-            self.game_over_menu.handle_event(event)
-            
-            # 检查游戏结束菜单是否完成
-            if self.game_over_menu.is_finished():
-                action = self.game_over_menu.get_action()
-                if action == 'restart':
-                    self.restart_game()
-                    self.game_over_menu.reset()
-                elif action == 'main_menu':
-                    self.finished = True
-                    self.next = 'main_menu'
-                elif action == 'quit':
-                    pygame.quit()
-                    quit()
-        elif self.paused:
-            # 如果游戏暂停，将事件传递给暂停菜单
-            self.pause_menu.handle_event(event)
-            
-            # 检查暂停菜单是否完成
-            if self.pause_menu.is_finished():
-                action = self.pause_menu.get_action()
-                if action == 'resume':
-                    self.paused = False
-                    # 恢复游戏时重置时间，防止时间跳跃
-                    self.last_time = pygame.time.get_ticks()
-                    self.pause_menu.reset()
-                elif action == 'restart':
-                    self.restart_game()
-                    self.paused = False
-                    # 重新开始时重置时间
-                    self.last_time = pygame.time.get_ticks()
-                    self.pause_menu.reset()
-                elif action == 'main_menu':
-                    self.finished = True
-                    self.next = 'main_menu'
-                elif action == 'quit':
-                    pygame.quit()
-                    quit()
-        else:
-            # 游戏进行中的事件处理
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE or event.key == pygame.K_p:
-                    # ESC或P键暂停游戏（只有在游戏未结束时才能暂停）
-                    if not self.game_over:
-                        self.paused = True
-                        # 暂停时记录当前时间
-                        self.last_time = pygame.time.get_ticks()
-                        self.pause_menu.reset()
+        # 使用状态管理器处理事件
+        self.state_manager.handle_event(event)
+
+        # 检查游戏状态并更新状态管理器
+        if self.level_completed and self.state_manager.get_current_state() != self.state_manager.STATE_LEVEL_COMPLETE:
+            # 关卡完成，切换到关卡完成状态
+            self.state_manager.set_state(self.state_manager.STATE_LEVEL_COMPLETE)
+        elif self.game_over and self.state_manager.get_current_state() != self.state_manager.STATE_GAME_OVER:
+            # 游戏结束，切换到游戏结束状态
+            self.state_manager.set_state(self.state_manager.STATE_GAME_OVER)
+            self.state_manager.level_game_over.set_level_info(self.current_level_index + 1, len(self.available_levels),
+                                                              self.level_completed)
+        elif self.paused and self.state_manager.get_current_state() != self.state_manager.STATE_PAUSE:
+            # 游戏暂停，切换到暂停状态
+            self.state_manager.set_state(self.state_manager.STATE_PAUSE)
+            self.state_manager.level_pause_menu.set_level_info(self.current_level_index + 1, len(self.available_levels))
 
     def update(self, surface, keys):
         """
@@ -218,18 +204,27 @@ class LevelMode:
         # 检查关卡是否完成
         if not self.level_completed and self.score >= self.target_score:
             self.level_completed = True
+            self.show_level_loading = True
+
+            # TODO : 在游戏胜利跳入下一关前，先给出游戏胜利界面，跳转到暂停界面（不过暂停界面的标题是游戏胜利，而不是暂停）因为游戏胜利界面和暂停界面的功能相同
+            self._go_to_next_level()
             print(f"关卡完成！得分: {self.score}, 目标分数: {self.target_score}")
+
+        # 更新状态管理器
+        self.state_manager.update(surface, keys)
+
+        # 如果处于界面状态，不更新游戏逻辑
+        if self.state_manager.is_in_interface_state():
+            # 如果游戏暂停，暂停时更新last_time，防止恢复时时间跳跃
+            if self.paused:
+                self.last_time = pygame.time.get_ticks()
+            return
 
         # 如果关卡完成，显示完成界面
         if self.level_completed:
             self._draw_level_complete(surface)
-        # 如果游戏结束，更新游戏结束菜单
-        elif self.game_over:
-            self.game_over_menu.update(surface, keys)
-        # 如果游戏暂停，更新暂停菜单
+        # 如果游戏暂停，暂停时更新last_time，防止恢复时时间跳跃
         elif self.paused:
-            self.pause_menu.update(surface, keys)
-            # 暂停时更新last_time，防止恢复时时间跳跃
             self.last_time = pygame.time.get_ticks()
         elif not self.game_over:
             # 计算时间增量
@@ -306,6 +301,10 @@ class LevelMode:
         if getattr(self, 'self_collision', True) and self.snake.check_self_collision():
             self.snake.is_dead = True
             self.game_over = True
+            # 立即切换到游戏结束状态
+            self.state_manager.set_state(self.state_manager.STATE_GAME_OVER)
+            self.state_manager.level_game_over.set_level_info(self.current_level_index + 1, len(self.available_levels),
+                                                              self.level_completed)
             print(f"游戏结束：蛇撞到自己了！最终得分: {self.score}")
             return
 
@@ -315,6 +314,10 @@ class LevelMode:
             if self.wall_manager.check_collision(snake_head_pos, self.snake.config.collision_radius):
                 self.snake.is_dead = True
                 self.game_over = True
+                # 立即切换到游戏结束状态
+                self.state_manager.set_state(self.state_manager.STATE_GAME_OVER)
+                self.state_manager.level_game_over.set_level_info(self.current_level_index + 1, len(self.available_levels),
+                                                                  self.level_completed)
                 print(f"游戏结束：蛇撞到墙壁了！最终得分: {self.score}")
                 return
 
@@ -323,6 +326,10 @@ class LevelMode:
             if self.snake.check_boundary_collision(screen_width=self.screen_width, screen_height=self.screen_height):
                 self.snake.is_dead = True
                 self.game_over = True
+                # 立即切换到游戏结束状态
+                self.state_manager.set_state(self.state_manager.STATE_GAME_OVER)
+                self.state_manager.level_game_over.set_level_info(self.current_level_index + 1, len(self.available_levels),
+                                                                  self.level_completed)
                 print(f"游戏结束：蛇撞到边界了！最终得分: {self.score}")
                 return
 
@@ -350,13 +357,8 @@ class LevelMode:
         # 绘制UI
         self._draw_ui(surface, colors['text'])
 
-        # 绘制暂停界面
-        if self.paused and not self.game_over:
-            self.pause_menu.draw(surface)
-
-        # 绘制游戏结束界面
-        if self.game_over:
-            self.game_over_menu.draw(surface)
+        # 绘制状态管理器界面
+        self.state_manager.draw(surface)
 
         # 绘制性能监控
         self.performance_monitor.draw_stats(surface)
@@ -379,7 +381,8 @@ class LevelMode:
         :param text_color: 文本颜色
         """
         # 绘制关卡信息
-        level_text = self.font_manager.render_text(f"关卡: {self.level_config.get('name', '未知')}", 'score', text_color)
+        level_text = self.font_manager.render_text(f"关卡: {self.level_config.get('name', '未知')}", 'score',
+                                                   text_color)
         surface.blit(level_text, (10, 10))
 
         # 绘制分数
@@ -427,6 +430,32 @@ class LevelMode:
         text_rect = progress_text.get_rect(center=(bar_x + bar_width // 2, bar_y + bar_height // 2))
         surface.blit(progress_text, text_rect)
 
+    def _go_to_next_level(self):
+        """切换到下一关"""
+        if self.current_level_index < len(self.available_levels) - 1:
+            next_level = self.available_levels[self.current_level_index + 1]
+            self.finished = True
+            self.next = f'level_mode:{next_level}'
+            print(f"切换到下一关: {next_level}")
+        else:
+            # 已经是最后一关，返回主菜单
+            self.finished = True
+            self.next = 'main_menu'
+            print("已经是最后一关，返回主菜单")
+
+    def _go_to_previous_level(self):
+        """切换到上一关"""
+        if self.current_level_index > 0:
+            prev_level = self.available_levels[self.current_level_index - 1]
+            self.finished = True
+            self.next = f'level_mode:{prev_level}'
+            print(f"切换到上一关: {prev_level}")
+        else:
+            # 已经是第一关，返回主菜单
+            self.finished = True
+            self.next = 'main_menu'
+            print("已经是第一关，返回主菜单")
+
     def _draw_level_complete(self, surface):
         """绘制关卡完成界面"""
         # 半透明覆盖层
@@ -445,9 +474,18 @@ class LevelMode:
         score_rect = score_text.get_rect(center=(self.screen_width // 2, self.screen_height // 2 + 10))
         surface.blit(score_text, score_rect)
 
+        # 关卡导航信息
+        level_info = f"当前关卡: {self.current_level_index + 1}/{len(self.available_levels)}"
+        level_text = self.font_manager.render_text(level_info, 'large', (200, 200, 200))
+        level_rect = level_text.get_rect(center=(self.screen_width // 2, self.screen_height // 2 + 50))
+        surface.blit(level_text, level_rect)
+
         # 继续提示
-        continue_text = self.font_manager.render_text("按回车键返回主菜单", 'large', (200, 200, 200))
-        continue_rect = continue_text.get_rect(center=(self.screen_width // 2, self.screen_height // 2 + 70))
+        if self.current_level_index < len(self.available_levels) - 1:
+            continue_text = self.font_manager.render_text("按回车键进入下一关", 'large', (200, 200, 200))
+        else:
+            continue_text = self.font_manager.render_text("按回车键返回主菜单", 'large', (200, 200, 200))
+        continue_rect = continue_text.get_rect(center=(self.screen_width // 2, self.screen_height // 2 + 90))
         surface.blit(continue_text, continue_rect)
 
     def restart_game(self):
@@ -472,11 +510,13 @@ class LevelMode:
         self.level_completed = False
         self.game_over = False
         self.paused = False
+        self.show_level_loading = False
+        self.show_level_pause = False
+        self.show_level_game_over = False
         self.last_time = pygame.time.get_ticks()
         self.performance_monitor.reset_stats()
-        
-        # 重置菜单状态
-        self.pause_menu.reset()
-        self.game_over_menu.reset()
-        
+
+        # 重置状态管理器
+        self.state_manager.set_state(self.state_manager.STATE_GAME)
+
         print(f"关卡重新开始 - {self.level_config.get('name', '未知')}")

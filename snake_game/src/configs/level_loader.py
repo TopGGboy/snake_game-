@@ -12,7 +12,7 @@ class LevelLoader:
     """关卡配置加载器"""
 
     def __init__(self):
-        self.config_dir = '../configs/level'
+        self.config_dir = 'src/configs/level'
         self.loaded_levels = {}
 
     def load_level_config(self, level_name: str) -> Optional[Dict[str, Any]]:
@@ -118,12 +118,12 @@ class LevelLoader:
         """
         levels_info = []
         available_levels = self.get_available_levels()
-        
+
         for level_name in available_levels:
             level_info = self.get_level_info(level_name)
             if level_info:
                 levels_info.append(level_info)
-        
+
         return levels_info
 
 
