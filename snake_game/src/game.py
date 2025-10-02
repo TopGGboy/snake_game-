@@ -37,11 +37,12 @@ class Game:
         self.selected_skin = None  # 存储选中的皮肤配置
         self.selected_level = None  # 存储选中的关卡配置
         
-        # 初始化声音管理器并加载背景音乐
+        # 初始化声音管理器并预加载所有音乐
         self.sound_manager = SoundManager.get_instance()
-        music_path = os.path.join("assets", "sound", "main.mp3")
-        if self.sound_manager.load_background_music(music_path, "main"):
-            self.sound_manager.play_background_music()
+        self.sound_manager.initialize_preloading()  # 预加载所有音乐文件
+        
+        # 直接播放预加载的主界面音乐（使用预加载机制）
+        self.sound_manager.switch_to_main_music()
 
     def run(self):
         """
@@ -123,9 +124,8 @@ class Game:
                     # 如果没有选择皮肤，使用当前配置中的皮肤ID
                     self.selected_skin = self.config.get_skin_id()
 
-                # 切换到游戏运行时音乐
+                # 切换到游戏运行时音乐（使用预加载机制）
                 self.sound_manager.switch_to_game_music()
-                self.sound_manager.play_background_music()
 
                 self.state = InfiniteMode(self.selected_difficulty, self.selected_skin)
                 self.state.finished = False
@@ -161,9 +161,8 @@ class Game:
                 self.state.finished = False
                 self.config.MAIN_MENU_FLAG = False
 
-                # 切换到游戏运行时音乐
+                # 切换到游戏运行时音乐（使用预加载机制）
                 self.sound_manager.switch_to_game_music()
-                self.sound_manager.play_background_music()
 
             elif self.next_state == "main_menu":
                 # 返回主菜单（从皮肤选择或关卡选择返回时）
@@ -173,9 +172,8 @@ class Game:
                     self.config.set_skin_id(self.selected_skin)
                     print(f"从皮肤选择返回，皮肤ID: {self.selected_skin}")
 
-                # 切换到主界面音乐
+                # 切换到主界面音乐（使用预加载机制）
                 self.sound_manager.switch_to_main_music()
-                self.sound_manager.play_background_music()
 
                 # 返回主菜单
                 self.state = MainMenu()
