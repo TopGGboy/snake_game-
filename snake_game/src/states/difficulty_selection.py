@@ -2,10 +2,10 @@
 难度选择界面
 """
 import pygame
-from src.configs.config import Config
-from src.configs.game_balance import GameBalance
-from src.configs.difficulty_loader import get_difficulty_loader
-from src.utils.font_manager import get_font_manager
+from ..configs.config import Config
+from ..configs.game_balance import GameBalance
+from ..configs.difficulty_loader import get_difficulty_loader
+from ..utils.font_manager import get_font_manager
 
 
 class DifficultySelection:

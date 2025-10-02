@@ -36,3 +36,11 @@ class Config:
     def get_skin_id(self) -> int:
         """获取当前皮肤ID"""
         return self.skin_id
+        
+    def set_selected_level(self, level_info):
+        """设置选中的关卡信息"""
+        self.selected_level = level_info
+        
+    def get_selected_level(self):
+        """获取选中的关卡信息"""
+        return getattr(self, 'selected_level', None)

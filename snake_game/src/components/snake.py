@@ -67,11 +67,11 @@ class Snake(pygame.sprite.Sprite):
 
         # 获取头部图片
         original_head = manager.get_snake_image(self.skin_id, "head")
-        
+
         # 检查是否有身体图片
         self.has_body_images = manager.get_snake_image(self.skin_id, "body0") is not None
         self.body_images = {}
-        
+
         if self.has_body_images:
             # 如果有身体图片，加载所有身体图片
             for i in range(5):  # 尝试加载最多5个身体图片
@@ -217,14 +217,14 @@ class Snake(pygame.sprite.Sprite):
         # 1. 更新角度（优化的平滑转向）
         if self.config.smooth_turning:
             angle_diff = self._get_angle_difference(self.target_angle, self.angle)
-            
+
             # 自适应转向速度：角度差越大，转向越快
             base_turn_speed = self.config.turn_speed
             adaptive_multiplier = min(2.0, 1.0 + abs(angle_diff) / 90.0)  # 最大2倍速度
             adaptive_turn_speed = base_turn_speed * adaptive_multiplier
-            
+
             max_turn = adaptive_turn_speed * dt_seconds
-            
+
             # 小角度直接转向，大角度渐进转向
             if abs(angle_diff) <= 15.0:  # 15度以内直接转向
                 self.angle = self.target_angle
@@ -459,14 +459,14 @@ class Snake(pygame.sprite.Sprite):
     def _draw_body_circle(self, surface: pygame.Surface, pos: Tuple[int, int],
                           colors: dict, radius: int, segment_index: int = 0) -> None:
         """绘制蛇身段 - 支持图片和默认绘制"""
-        
+
         # 如果有身体图片，使用图片绘制
         if self.has_body_images and self.body_images:
             # 根据身体段索引选择图片（循环使用可用的图片）
             body_img_index = segment_index % len(self.body_images)
             if body_img_index in self.body_images:
                 body_img = self.body_images[body_img_index]
-                
+
                 # 加速状态下的脉动效果
                 if self.is_boosting:
                     pulse_factor = 1.0 + 0.1 * math.sin(self.animation_time * self.pulse_speed + segment_index * 0.3)
@@ -480,7 +480,7 @@ class Snake(pygame.sprite.Sprite):
                     img_rect = body_img.get_rect(center=pos)
                     surface.blit(body_img, img_rect)
                 return
-        
+
         # 如果没有身体图片，使用默认绘制
         # 加速状态下的脉动效果
         if self.is_boosting:
@@ -549,7 +549,7 @@ class Snake(pygame.sprite.Sprite):
         """根据皮肤ID获取对应的颜色配置（使用统一的皮肤配置系统）"""
         # 获取完整的颜色配置
         full_config = get_snake_color_config(skin_id)
-        
+
         # 转换为蛇组件需要的格式
         skin_colors = {
             'normal': {
@@ -563,7 +563,7 @@ class Snake(pygame.sprite.Sprite):
                 'highlight': full_config['boost']['highlight']
             }
         }
-        
+
         return skin_colors
 
     def change_skin(self, new_skin_id: int) -> None:

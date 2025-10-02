@@ -4,22 +4,24 @@
 """
 import pygame
 import os
-from src.configs.config import Config
-from src.configs.skin_config import get_available_skins, get_skin_by_key, get_snake_colors
-from src.configs.game_balance import GameBalance
-from src.utils.font_manager import get_font_manager
-from src.utils.image_manager import get_image_manager
+from ..configs.config import Config
+from ..configs.skin_config import get_available_skins, get_skin_by_key, get_snake_colors
+from ..configs.game_balance import GameBalance
+from ..utils.font_manager import get_font_manager
+from ..utils.image_manager import get_image_manager
 
 
 class SkinSelection:
-    def __init__(self):
+    def __init__(self, previous_state=None):
         """
         初始化皮肤选择状态 - 卡片式布局
+        :param previous_state: 前一个状态，用于判断是从哪个状态进入的
         """
         self.config = Config.get_instance()
         self.finished = False
         self.next = "main_menu"
         self.selected_skin = None
+        self.previous_state = previous_state  # 记录前一个状态
 
         # 获取字体管理器
         self.font_manager = get_font_manager()
@@ -44,7 +46,7 @@ class SkinSelection:
         # 获取图片管理器
         self.image_manager = get_image_manager()
 
-        # 返回按钮位置
+        # 按钮位置 - 只保留返回按钮，居中显示
         self.back_button_rect = pygame.Rect(
             self.config.SCREEN_W // 2 - 100,
             self.config.SCREEN_H - 80,
@@ -94,9 +96,17 @@ class SkinSelection:
             if self.selected_option + self.cards_per_row < total_options:
                 self.selected_option += self.cards_per_row
         elif event_key == pygame.K_RETURN or event_key == pygame.K_SPACE:
-            # 选择皮肤
+            # 选择皮肤，但不离开当前界面
             self.selected_skin = self.skin_options[self.selected_option]
-            self.finished = True
+            
+            # 立即保存皮肤ID到全局配置
+            skin_id = self._get_skin_id_from_key(self.selected_skin['image_prefix'])
+            self.config.set_skin_id(skin_id)
+            print(f"选择了皮肤: {self.selected_skin['name']}, 皮肤ID: {skin_id}")
+        elif event_key == pygame.K_RETURN:
+            # 回车键选择皮肤，但不离开当前界面
+            self.selected_skin = self.skin_options[self.selected_option]
+            
             # 立即保存皮肤ID到全局配置
             skin_id = self._get_skin_id_from_key(self.selected_skin['image_prefix'])
             self.config.set_skin_id(skin_id)
@@ -147,7 +157,7 @@ class SkinSelection:
 
             self._draw_skin_card(surface, skin, x, y, is_selected, hover_progress)
 
-        # 绘制返回按钮
+        # 绘制按钮 - 只绘制返回按钮
         self._draw_back_button(surface)
 
         # 绘制控制提示
@@ -332,10 +342,12 @@ class SkinSelection:
         back_rect = back_text.get_rect(center=self.back_button_rect.center)
         surface.blit(back_text, back_rect)
 
+
+
     def _draw_controls_help(self, surface):
         """绘制控制提示"""
         help_texts = [
-            "←→↑↓ 选择卡片    回车 确认选择    ESC/B 返回"
+            "←→↑↓ 选择卡片    回车 选择皮肤    ESC/B 返回主菜单"
         ]
 
         for i, text in enumerate(help_texts):
@@ -370,12 +382,13 @@ class SkinSelection:
                 if card_rect.collidepoint(mouse_pos):
                     self.selected_option = i
                     self.selected_skin = self.skin_options[i]
-                    self.finished = True
                     # 立即保存皮肤ID到全局配置
                     skin_id = self._get_skin_id_from_key(self.selected_skin['image_prefix'])
                     self.config.set_skin_id(skin_id)
                     print(f"选择了皮肤: {self.selected_skin['name']}, 皮肤ID: {skin_id}")
                     return True
+
+
 
             # 检查是否点击了返回按钮
             if self.back_button_rect.collidepoint(mouse_pos):

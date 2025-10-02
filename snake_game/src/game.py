@@ -2,11 +2,13 @@
 游戏主控
 """
 import pygame
-from src.configs.config import Config
-from src.states.main_menu import MainMenu
-from src.states.difficulty_selection import DifficultySelection
-from src.states.infinite_mode import InfiniteMode
-from src.states.skin_selection import SkinSelection
+from .configs.config import Config
+from .states.main_menu import MainMenu
+from .states.difficulty_selection import DifficultySelection
+from .states.infinite_mode import InfiniteMode
+from .states.skin_selection import SkinSelection
+from .states.level_selection import LevelSelection
+from .states.level_mode import LevelMode
 
 
 class Game:
@@ -31,6 +33,7 @@ class Game:
         self.return_home_flage = False  # 返回主菜单标志
         self.selected_difficulty = None  # 存储选中的难度配置
         self.selected_skin = None  # 存储选中的皮肤配置
+        self.selected_level = None  # 存储选中的关卡配置
 
     def run(self):
         """
@@ -43,11 +46,12 @@ class Game:
                     pygame.quit()
                     quit()
                 elif event.type == pygame.KEYDOWN:
-                    # 判断是否在主界面
+                    # 判断是否在主界面或菜单状态
                     flag = self.config.MAIN_MENU_FLAG
                     if flag:
-                        # 主界面逻辑
-                        self.state.update_cursor(event.key)
+                        # 主界面逻辑，使用update_cursor方法
+                        if hasattr(self.state, 'update_cursor'):
+                            self.state.update_cursor(event.key)
                     else:
                         # 游戏进行中，将事件传递给当前状态
                         if hasattr(self.state, 'handle_event'):
@@ -109,13 +113,45 @@ class Game:
                 self.config.MAIN_MENU_FLAG = False
 
             elif self.next_state == "skin_selection":
-                # 进入皮肤选择
-                self.state = SkinSelection()
+                # 进入皮肤选择，传递前一个状态信息
+                previous_state = None
+                if hasattr(self.state, 'get_selected_level'):
+                    previous_state = "level_selection"  # 从关卡选择来的
+                elif hasattr(self.state, 'get_selected_difficulty'):
+                    previous_state = "difficulty_selection"  # 从难度选择来的
+                    
+                self.state = SkinSelection(previous_state)
                 self.state.finished = False
                 self.config.MAIN_MENU_FLAG = True  # 保持菜单模式用于键盘导航
 
+            elif self.next_state == "level_selection":
+                # 进入关卡选择
+                print("切换到关卡选择界面...")
+                self.state = LevelSelection()
+                self.state.finished = False
+                self.config.MAIN_MENU_FLAG = True  # 保持菜单模式用于键盘导航
+                print("关卡选择界面初始化完成")
+
+            elif self.next_state == "level_mode":
+                # 进入关卡模式
+                # 从全局配置获取选中的关卡信息
+                self.selected_level = self.config.get_selected_level()
+                print(f"获取关卡信息: {self.selected_level}")
+
+                if self.selected_level:
+                    # 关卡模式现在直接从全局配置获取皮肤ID
+                    self.state = LevelMode(self.selected_level['file_path'])
+                    self.state.finished = False
+                    self.config.MAIN_MENU_FLAG = False
+                else:
+                    # 如果没有选择关卡，返回主菜单
+                    print("错误：没有选择关卡，返回主菜单")
+                    self.state = MainMenu()
+                    self.state.finished = False
+                    self.config.MAIN_MENU_FLAG = True
+
             elif self.next_state == "main_menu":
-                # 返回主菜单（从皮肤选择返回时）
+                # 返回主菜单（从皮肤选择或关卡选择返回时）
                 if hasattr(self.state, 'get_selected_skin'):
                     self.selected_skin = self.state.get_selected_skin()
                     # 更新全局配置中的皮肤ID

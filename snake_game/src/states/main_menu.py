@@ -2,11 +2,11 @@
 简化的主菜单
 """
 import pygame
-from src.configs.config import Config
-from src.configs.skin_config import get_snake_colors
-from src.configs.game_balance import GameBalance
-from src.utils.font_manager import get_font_manager
-from src.utils.image_manager import get_image_manager
+from ..configs.config import Config
+from ..configs.skin_config import get_snake_colors
+from ..configs.game_balance import GameBalance
+from ..utils.font_manager import get_font_manager
+from ..utils.image_manager import get_image_manager
 
 
 class MainMenu:
@@ -25,7 +25,7 @@ class MainMenu:
         self.image_manager = get_image_manager()
 
         # 菜单选项
-        self.menu_options = ["无尽模式", "选择皮肤", "退出"]
+        self.menu_options = ["无尽模式", "闯关模式", "选择皮肤", "退出"]
         self.selected_option = 0  # 当前选中的选项
 
     def update_cursor(self, event_key):
@@ -37,13 +37,16 @@ class MainMenu:
         elif event_key == pygame.K_DOWN or event_key == pygame.K_s:
             self.selected_option = (self.selected_option + 1) % len(self.menu_options)
         elif event_key == pygame.K_RETURN or event_key == pygame.K_SPACE:
-            if self.selected_option == 0:  # 开始游戏
+            if self.selected_option == 0:  # 无尽模式
                 self.finished = True
                 self.config.MAIN_MENU_FLAG = False
-            elif self.selected_option == 1:  # 选择皮肤
+            elif self.selected_option == 1:  # 闯关模式
+                self.finished = True
+                self.next = "level_selection"
+            elif self.selected_option == 2:  # 选择皮肤
                 self.finished = True
                 self.next = "skin_selection"
-            elif self.selected_option == 2:  # 退出
+            elif self.selected_option == 3:  # 退出
                 pygame.quit()
                 quit()
 
