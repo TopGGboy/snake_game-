@@ -35,10 +35,8 @@ class LevelLoadingScreen:
         :param surface: 绘制表面
         :param keys: 键盘按键状态
         """
-        # 更新加载进度
-        if self.progress < 100:
-            self.progress = min(100, self.progress + self.loading_speed)
-        else:
+        # 检查是否有按键按下
+        if any(keys):
             self.finished = True
         
         # 更新动画
@@ -61,64 +59,44 @@ class LevelLoadingScreen:
         
         # 绘制关卡标题
         level_text = self.font_manager.render_text(f"第 {self.current_level} 关", 'title', (255, 255, 255))
-        level_rect = level_text.get_rect(center=(self.config.SCREEN_W // 2, 150))
+        level_rect = level_text.get_rect(center=(self.config.SCREEN_W // 2, 200))
         surface.blit(level_text, level_rect)
         
-        # 绘制进度条背景
-        bar_width = 400
-        bar_height = 20
-        bar_x = (self.config.SCREEN_W - bar_width) // 2
-        bar_y = 250
+        # 绘制关卡进度信息
+        progress_text = self.font_manager.render_text(f"{self.current_level}/{self.total_levels}", 'large', (200, 200, 200))
+        progress_rect = progress_text.get_rect(center=(self.config.SCREEN_W // 2, 260))
+        surface.blit(progress_text, progress_rect)
         
-        # 进度条背景
-        pygame.draw.rect(surface, (50, 50, 50), (bar_x, bar_y, bar_width, bar_height))
+        # 绘制难度提示
+        if self.current_level <= 3:
+            difficulty_text = "难度: 简单"
+            color = (100, 255, 100)
+        elif self.current_level <= 6:
+            difficulty_text = "难度: 中等"
+            color = (255, 255, 100)
+        else:
+            difficulty_text = "难度: 困难"
+            color = (255, 100, 100)
         
-        # 进度条前景
-        progress_width = int(bar_width * self.progress / 100)
-        pygame.draw.rect(surface, (0, 200, 0), (bar_x, bar_y, progress_width, bar_height))
+        difficulty_surface = self.font_manager.render_text(difficulty_text, 'medium', color)
+        difficulty_rect = difficulty_surface.get_rect(center=(self.config.SCREEN_W // 2, 300))
+        surface.blit(difficulty_surface, difficulty_rect)
         
-        # 进度条边框
-        pygame.draw.rect(surface, (100, 100, 100), (bar_x, bar_y, bar_width, bar_height), 2)
-        
-        # 进度百分比
-        percent_text = self.font_manager.render_text(f"{self.progress}%", 'medium', (200, 200, 200))
-        percent_rect = percent_text.get_rect(center=(self.config.SCREEN_W // 2, bar_y + 35))
-        surface.blit(percent_text, percent_rect)
-        
-        # 加载提示文本
-        dots = "." * self.dots_count
-        loading_text = self.font_manager.render_text(f"加载中{dots}", 'large', (150, 150, 150))
-        loading_rect = loading_text.get_rect(center=(self.config.SCREEN_W // 2, 320))
-        surface.blit(loading_text, loading_rect)
-        
-        # 绘制关卡提示
-        self._draw_level_hints(surface)
+        # 绘制按键提示
+        key_text = self.font_manager.render_text("按任意键继续", 'large', (150, 200, 255))
+        key_rect = key_text.get_rect(center=(self.config.SCREEN_W // 2, 360))
+        surface.blit(key_text, key_rect)
 
     def _draw_level_hints(self, surface):
         """
-        绘制关卡提示信息
+        绘制关卡提示信息（简化版）
         :param surface: 绘制表面
         """
-        hints_y = 380
-        
-        # 根据关卡显示不同的提示
-        hints = [
-            f"关卡进度: {self.current_level}/{self.total_levels}",
-            "准备迎接新的挑战！"
-        ]
-        
-        # 根据关卡难度添加特定提示
-        if self.current_level <= 3:
-            hints.append("难度: 简单 - 熟悉操作")
-        elif self.current_level <= 6:
-            hints.append("难度: 中等 - 提升反应")
-        else:
-            hints.append("难度: 困难 - 考验技巧")
-        
-        for i, hint in enumerate(hints):
-            hint_text = self.font_manager.render_text(hint, 'medium', (100, 150, 200))
-            hint_rect = hint_text.get_rect(center=(self.config.SCREEN_W // 2, hints_y + i * 30))
-            surface.blit(hint_text, hint_rect)
+        # 简化为只显示一句鼓励语
+        encouragement = "准备迎接挑战！"
+        hint_text = self.font_manager.render_text(encouragement, 'medium', (150, 200, 255))
+        hint_rect = hint_text.get_rect(center=(self.config.SCREEN_W // 2, 320))
+        surface.blit(hint_text, hint_rect)
 
     def is_finished(self):
         """
@@ -140,12 +118,11 @@ class LevelLoadingScreen:
 
     def handle_event(self, event):
         """
-        处理事件 - 允许用户按任意键跳过加载界面
+        处理事件 - 允许用户按任意键继续
         :param event: pygame事件
         """
         if event.type == pygame.KEYDOWN:
-            # 按任意键跳过加载
-            self.progress = 100
+            # 按任意键继续
             self.finished = True
 
     def reset(self):

@@ -29,7 +29,8 @@ class LevelStateManager:
         self.current_state = self.STATE_LOADING
         
         # 创建界面实例
-        self.level_loading = LevelLoadingScreen(screen_width, screen_height)
+        self.level_loading = LevelLoadingScreen(level_mode_instance.current_level_index + 1, 
+                                               len(level_mode_instance.available_levels))
         self.level_pause_menu = LevelPauseMenu(screen_width, screen_height, level_mode_instance, 
                                               level_mode_instance.current_level_index + 1, 
                                               len(level_mode_instance.available_levels))
@@ -115,9 +116,19 @@ class LevelStateManager:
                 self.level_mode.restart_game()
                 self.set_state(self.STATE_GAME)
             elif action == 'next_level':
+                # 先更新关卡信息，再执行切换
+                self.level_loading.set_level(self.level_mode.current_level_index + 2, 
+                                           len(self.level_mode.available_levels))
                 self.level_mode._go_to_next_level()
+                # 确保状态管理器回到游戏状态，让主循环处理关卡切换
+                self.set_state(self.STATE_GAME)
             elif action == 'previous_level':
+                # 先更新关卡信息，再执行切换
+                self.level_loading.set_level(self.level_mode.current_level_index, 
+                                           len(self.level_mode.available_levels))
                 self.level_mode._go_to_previous_level()
+                # 确保状态管理器回到游戏状态，让主循环处理关卡切换
+                self.set_state(self.STATE_GAME)
             elif action == 'main_menu':
                 self.level_mode.finished = True
                 self.level_mode.next = 'main_menu'
@@ -135,8 +146,12 @@ class LevelStateManager:
                 self.set_state(self.STATE_GAME)
             elif action == 'next_level':
                 self.level_mode._go_to_next_level()
+                # 确保状态管理器回到游戏状态，让主循环处理关卡切换
+                self.set_state(self.STATE_GAME)
             elif action == 'previous_level':
                 self.level_mode._go_to_previous_level()
+                # 确保状态管理器回到游戏状态，让主循环处理关卡切换
+                self.set_state(self.STATE_GAME)
             elif action == 'main_menu':
                 self.level_mode.finished = True
                 self.level_mode.next = 'main_menu'
@@ -154,6 +169,9 @@ class LevelStateManager:
     
     def _handle_level_complete_event(self, event):
         """处理关卡完成事件 - 使用暂停界面显示游戏胜利"""
+        # 更新关卡信息
+        self.level_pause_menu.set_level_info(self.level_mode.current_level_index + 1, 
+                                           len(self.level_mode.available_levels))
         # 设置暂停界面为胜利模式
         self.level_pause_menu.set_victory_mode(True)
         
@@ -164,11 +182,15 @@ class LevelStateManager:
             if action == 'resume' or action == 'next_level':
                 # 继续游戏或下一关都跳转到下一关
                 self.level_mode._go_to_next_level()
+                # 确保状态管理器回到游戏状态，让主循环处理关卡切换
+                self.set_state(self.STATE_GAME)
             elif action == 'restart':
                 self.level_mode.restart_game()
                 self.set_state(self.STATE_GAME)
             elif action == 'previous_level':
                 self.level_mode._go_to_previous_level()
+                # 确保状态管理器回到游戏状态，让主循环处理关卡切换
+                self.set_state(self.STATE_GAME)
             elif action == 'main_menu':
                 self.level_mode.finished = True
                 self.level_mode.next = 'main_menu'

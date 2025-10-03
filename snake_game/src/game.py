@@ -157,7 +157,8 @@ class Game:
                 print(f"切换到关卡: {level_file}")
 
                 # 关卡模式现在直接从全局配置获取皮肤ID
-                self.state = LevelMode(f"./src/configs/level/{level_file}.json")
+                # 传递关卡名称而不是文件路径
+                self.state = LevelMode(level_file)
                 self.state.finished = False
                 self.config.MAIN_MENU_FLAG = False
 

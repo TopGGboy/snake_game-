@@ -29,12 +29,20 @@ class LevelMode:
 
         # 获取关卡加载器
         self.level_loader = get_level_loader()
-        self.level_config = self.level_loader.load_level_config(level_name)
+        
+        # 从level_name中提取关卡名称（处理可能的文件路径）
+        actual_level_name = level_name
+        if '/' in level_name:
+            actual_level_name = os.path.basename(level_name).replace('.json', '')
+        
+        # 构建正确的配置文件路径
+        level_config_path = f"src/configs/level/{actual_level_name}.json"
+        self.level_config = self.level_loader.load_level_config(level_config_path)
 
         if not self.level_config:
             # 如果关卡加载失败，使用默认配置
             self.level_config = self._get_default_level_config()
-            print(f"警告: 关卡 {level_name} 加载失败，使用默认配置")
+            print(f"警告: 关卡 {actual_level_name} 加载失败，使用默认配置")
 
         # 获取难度配置加载器
         self.difficulty_loader = get_difficulty_loader()
@@ -116,8 +124,13 @@ class LevelMode:
 
     def _get_current_level_index(self):
         """获取当前关卡在可用关卡列表中的索引"""
+        # 从level_name中提取关卡名称（处理可能的文件路径）
+        level_name = self.level_name
+        if '/' in level_name:
+            level_name = os.path.basename(level_name).replace('.json', '')
+        
         for i, level in enumerate(self.available_levels):
-            if level == self.level_name:
+            if level == level_name:
                 return i
         return 0
 
