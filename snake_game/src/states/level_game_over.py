@@ -48,7 +48,7 @@ class LevelGameOverMenu:
         self.selected_option = 0
         
         # 界面状态
-        self.action = None  # 'next_level', 'prev_level', 'restart', 'level_select', 'main_menu', 'quit'
+        self.action = None  # 'next_level', 'previous_level', 'restart', 'level_select', 'main_menu', 'quit'
         self.finished = False
         
         # 动画效果

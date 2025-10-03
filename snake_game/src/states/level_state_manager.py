@@ -189,7 +189,6 @@ class LevelStateManager:
                 self.set_state(self.STATE_GAME)
             elif action == 'previous_level':
                 self.level_mode._go_to_previous_level()
-                # 确保状态管理器回到游戏状态，让主循环处理关卡切换
                 self.set_state(self.STATE_GAME)
             elif action == 'main_menu':
                 self.level_mode.finished = True

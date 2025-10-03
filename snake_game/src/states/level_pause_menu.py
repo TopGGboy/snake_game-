@@ -47,7 +47,7 @@ class LevelPauseMenu:
         self.selected_option = 0
         
         # 界面状态
-        self.action = None  # 'resume', 'restart', 'prev_level', 'next_level', 'level_select', 'main_menu', 'quit'
+        self.action = None  # 'resume', 'restart', 'previous_level', 'next_level', 'level_select', 'main_menu', 'quit'
         self.finished = False
         
         # 动画效果
@@ -89,7 +89,7 @@ class LevelPauseMenu:
                 
             elif event.key == pygame.K_p and self.current_level > 1:
                 # P键快速上一关
-                self.action = 'prev_level'
+                self.action = 'previous_level'
                 self.finished = True
                 self.key_delay = current_time
                 
@@ -110,7 +110,7 @@ class LevelPauseMenu:
             self.action = 'restart'
             self.finished = True
         elif option_text == "上一关":
-            self.action = 'prev_level'
+            self.action = 'previous_level'
             self.finished = True
         elif option_text == "下一关":
             self.action = 'next_level'
