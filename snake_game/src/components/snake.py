@@ -180,9 +180,13 @@ class Snake(pygame.sprite.Sprite):
         was_boosting = self.is_boosting
         self.is_boosting = keys[pygame.K_SPACE]
         
-        # 如果加速状态发生变化（从非加速变为加速），播放加速音效
+        # 如果加速状态发生变化，控制加速音效的循环播放
         if self.is_boosting and not was_boosting:
-            self.sound_manager.play_high_speed_sound()
+            # 开始加速，开始循环播放加速音效
+            self.sound_manager.start_high_speed_sound()
+        elif not self.is_boosting and was_boosting:
+            # 停止加速，停止循环播放加速音效
+            self.sound_manager.stop_high_speed_sound()
 
         # 计算目标角度并开始移动
         if self.input_direction[0] != 0 or self.input_direction[1] != 0:

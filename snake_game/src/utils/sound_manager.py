@@ -27,6 +27,8 @@ class SoundManager:
         # 音效相关属性
         self.sound_effects = {}  # 音效缓存 {sound_name: sound_object}
         self.sound_volume = 0.7  # 音效默认音量
+        self.high_speed_channel = None  # 加速音效播放通道
+        self.is_high_speed_playing = False  # 加速音效是否正在播放
 
     @classmethod
     def get_instance(cls):
@@ -272,8 +274,38 @@ class SoundManager:
         """播放吃食物音效"""
         return self.play_sound_effect("eat")
 
+    def start_high_speed_sound(self):
+        """开始循环播放加速音效"""
+        if not self.is_high_speed_playing and "high_speed" in self.sound_effects:
+            try:
+                sound = self.sound_effects["high_speed"]
+                sound.set_volume(self.sound_volume)
+                # 循环播放加速音效
+                self.high_speed_channel = sound.play(loops=-1)
+                self.is_high_speed_playing = True
+                print("开始循环播放加速音效")
+                return True
+            except Exception as e:
+                print(f"开始播放加速音效失败: {e}")
+                return False
+        return False
+
+    def stop_high_speed_sound(self):
+        """停止加速音效"""
+        if self.is_high_speed_playing:
+            try:
+                if self.high_speed_channel:
+                    self.high_speed_channel.stop()
+                self.is_high_speed_playing = False
+                print("停止加速音效")
+                return True
+            except Exception as e:
+                print(f"停止加速音效失败: {e}")
+                return False
+        return False
+
     def play_high_speed_sound(self):
-        """播放加速音效"""
+        """播放单次加速音效（兼容旧版本）"""
         return self.play_sound_effect("high_speed")
 
     def play_game_over_sound(self):
