@@ -77,15 +77,10 @@ class MainMenu:
         # 绘制当前蛇形象预览
         self._draw_snake_preview(surface)
 
-        # 调试信息：显示当前皮肤ID
-        debug_text = self.font_manager.render_text(f"调试: 皮肤ID={self.config.get_skin_id()}", 'small',
-                                                   (255, 100, 100))
-        debug_rect = debug_text.get_rect(center=(self.config.SCREEN_W // 2, 550))
-        surface.blit(debug_text, debug_rect)
 
         # 绘制控制提示
         help_text = self.font_manager.render_text("使用方向键选择，回车确认", 'help', (150, 150, 150))
-        help_rect = help_text.get_rect(center=(self.config.SCREEN_W // 2, 500))
+        help_rect = help_text.get_rect(center=(self.config.SCREEN_W // 2, 550))
         surface.blit(help_text, help_rect)
 
     def _draw_snake_preview(self, surface):
@@ -94,8 +89,8 @@ class MainMenu:
         current_skin_id = self.config.get_skin_id()
 
         # 预览区域位置和大小
-        preview_x = self.config.SCREEN_W - 200
-        preview_y = 200
+        preview_x = self.config.SCREEN_W - 250
+        preview_y = 280
         preview_width = 180
         preview_height = 120
 
@@ -114,8 +109,8 @@ class MainMenu:
         body_image = self.image_manager.get_snake_image(current_skin_id, "body0")
 
         # 预览中心位置
-        preview_center_x = preview_x + preview_width // 2
-        preview_center_y = preview_y + 70
+        preview_center_x = preview_x + preview_width // 2 + 10
+        preview_center_y = preview_y + 60
 
         # 缩放蛇头图片为合适大小并水平翻转（让蛇头朝向右边）
         head_size = (GameBalance.SNAKE_HEAD_SIZE, GameBalance.SNAKE_HEAD_SIZE)
@@ -149,5 +144,5 @@ class MainMenu:
 
         # 绘制皮肤ID信息
         skin_info = self.font_manager.render_text(f"皮肤 {current_skin_id}", 'small', (200, 200, 200))
-        info_rect = skin_info.get_rect(center=(preview_center_x, preview_y + preview_height - 20))
+        info_rect = skin_info.get_rect(center=(preview_center_x - 20, preview_y + preview_height - 20))
         surface.blit(skin_info, info_rect)

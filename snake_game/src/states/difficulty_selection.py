@@ -162,21 +162,27 @@ class DifficultySelection:
 
         # 绘制标题
         title_text = self.font_manager.render_text("选择难度", 'title', (255, 255, 255))
-        title_rect = title_text.get_rect(center=(self.config.SCREEN_W // 2, 80))
+        title_rect = title_text.get_rect(center=(self.config.SCREEN_W // 2, 60))
         surface.blit(title_text, title_rect)
+
+        # 绘制副标题
+        subtitle_text = self.font_manager.render_text("无尽模式 - 挑战你的极限", 'medium', (200, 200, 200))
+        subtitle_rect = subtitle_text.get_rect(center=(self.config.SCREEN_W // 2, 110))
+        surface.blit(subtitle_text, subtitle_rect)
 
         # 绘制难度选项
         start_y = 150
-        option_height = 140
+        option_height = 130
+        option_spacing = 15
 
         for i, option in enumerate(self.difficulty_options):
-            y_pos = start_y + i * option_height
+            y_pos = start_y + i * (option_height + option_spacing)
             is_selected = (i == self.selected_option)
 
             self._draw_difficulty_option(surface, option, y_pos, is_selected)
 
         # 绘制返回选项
-        back_y = start_y + len(self.difficulty_options) * option_height + 20
+        back_y = start_y + len(self.difficulty_options) * (option_height + option_spacing) + 30
         is_back_selected = (self.selected_option == self.back_option)
         self._draw_back_option(surface, back_y, is_back_selected)
 
@@ -185,74 +191,160 @@ class DifficultySelection:
 
     def _draw_gradient_background(self, surface):
         """绘制渐变背景"""
+        # 从深蓝到深紫色的渐变，更加现代美观
         for y in range(self.config.SCREEN_H):
-            # 从深蓝到黑色的渐变
             ratio = y / self.config.SCREEN_H
-            color_value = int(40 * (1 - ratio))
-            color = (color_value, color_value, color_value + 20)
+            # 蓝色到紫色的渐变
+            r = int(20 + 10 * ratio)        # 红色分量
+            g = int(20 + 15 * ratio)        # 绿色分量  
+            b = int(40 + 30 * ratio)        # 蓝色分量
+            color = (r, g, b)
             pygame.draw.line(surface, color, (0, y), (self.config.SCREEN_W, y))
+        
+        # 添加星空效果
+        import random
+        random.seed(42)  # 固定随机种子，保证每次显示一致
+        for _ in range(50):
+            x = random.randint(0, self.config.SCREEN_W)
+            y = random.randint(0, self.config.SCREEN_H)
+            size = random.randint(1, 2)
+            brightness = random.randint(100, 200)
+            pygame.draw.circle(surface, (brightness, brightness, brightness), (x, y), size)
 
     def _draw_difficulty_option(self, surface, option, y_pos, is_selected):
         """绘制单个难度选项"""
-        # 计算选项区域
-        option_width = 700
+        # 响应式选项区域计算
+        option_width = min(720, self.config.SCREEN_W - 80)  # 最大720px，最小留边距
         option_height = 120
         option_x = (self.config.SCREEN_W - option_width) // 2
         option_rect = pygame.Rect(option_x, y_pos, option_width, option_height)
 
         # 选中效果
         if is_selected:
-            # 脉动效果
-            pulse = 1.0 + 0.1 * pygame.math.Vector2(1, 0).rotate(self.animation_time * self.pulse_speed * 360).x
-            glow_color = tuple(int(c * 0.3) for c in option['color'])
+            # 增强脉动效果
+            pulse_intensity = 0.15 * pygame.math.Vector2(1, 0).rotate(self.animation_time * self.pulse_speed * 360).x
+            glow_intensity = 0.4 + abs(pulse_intensity) * 0.2
+            glow_color = tuple(int(c * glow_intensity) for c in option['color'])
 
-            # 绘制发光边框
-            glow_rect = option_rect.inflate(10, 10)
-            pygame.draw.rect(surface, glow_color, glow_rect, 3)
+            # 绘制多层发光边框
+            for i in range(3, 0, -1):
+                glow_size = i * 6
+                glow_rect = option_rect.inflate(glow_size, glow_size)
+                alpha_color = tuple(int(c * (0.6 - i * 0.15)) for c in option['color'])
+                pygame.draw.rect(surface, alpha_color, glow_rect, 2)
 
-            # 背景高亮
-            bg_color = tuple(int(c * 0.2) for c in option['color'])
-            pygame.draw.rect(surface, bg_color, option_rect)
+            # 渐变背景高亮
+            for i in range(option_height):
+                ratio = i / option_height
+                highlight_intensity = 0.15 + 0.05 * ratio
+                bg_color = tuple(int(c * highlight_intensity) for c in option['color'])
+                pygame.draw.line(surface, bg_color, (option_x, y_pos + i), (option_x + option_width, y_pos + i))
+
+            # 添加光晕效果
+            corner_radius = 8
+            for corner in [(option_x, y_pos), (option_x + option_width, y_pos), 
+                          (option_x, y_pos + option_height), (option_x + option_width, y_pos + option_height)]:
+                pygame.draw.circle(surface, glow_color, corner, corner_radius)
         else:
-            # 普通背景
-            pygame.draw.rect(surface, (30, 30, 30), option_rect)
+            # 普通渐变背景
+            for i in range(option_height):
+                ratio = i / option_height
+                bg_value = 25 + int(10 * ratio)
+                pygame.draw.line(surface, (bg_value, bg_value, bg_value), 
+                                (option_x, y_pos + i), (option_x + option_width, y_pos + i))
 
         # 边框
-        border_color = option['color'] if is_selected else (100, 100, 100)
-        pygame.draw.rect(surface, border_color, option_rect, 2)
+        border_width = 3 if is_selected else 2
+        border_color = option['color'] if is_selected else (80, 80, 80)
+        pygame.draw.rect(surface, border_color, option_rect, border_width)
 
-        # 难度名称
-        name_color = option['color'] if is_selected else (200, 200, 200)
-        name_text = self.font_manager.render_text(option['name'], 'large', name_color)
-        name_rect = name_text.get_rect(left=option_x + 20, top=y_pos + 10)
+        # 圆角效果
+        corner_radius = 6
+        pygame.draw.rect(surface, border_color, option_rect, border_width, corner_radius)
+
+        # 难度名称（左侧区域）
+        name_color = option['color'] if is_selected else (220, 220, 220)
+        name_text = self.font_manager.render_text(option['name'], 'xlarge', name_color)
+        name_rect = name_text.get_rect(left=option_x + 25, top=y_pos + 15)
         surface.blit(name_text, name_rect)
 
         # 描述
         desc_text = self.font_manager.render_text(option['description'], 'medium', (180, 180, 180))
-        desc_rect = desc_text.get_rect(left=option_x + 20, top=y_pos + 45)
+        desc_rect = desc_text.get_rect(left=option_x + 25, top=y_pos + 55)
         surface.blit(desc_text, desc_rect)
 
-        # 特性列表
-        features_x = option_x + 350
+        # 特性列表（右侧区域）
+        features_x = option_x + option_width // 2 + 10
+        features_start_y = y_pos + 20
+        
+        # 特性标题
+        features_title = self.font_manager.render_text("特性:", 'medium', (160, 160, 160) if not is_selected else (200, 200, 200))
+        features_title_rect = features_title.get_rect(left=features_x, top=features_start_y)
+        surface.blit(features_title, features_title_rect)
+
+        # 特性项目
         for j, feature in enumerate(option['features']):
-            feature_color = (150, 150, 150) if not is_selected else (200, 200, 200)
+            feature_color = (140, 140, 140) if not is_selected else (180, 180, 180)
             feature_text = self.font_manager.render_text(feature, 'small', feature_color)
-            feature_rect = feature_text.get_rect(left=features_x, top=y_pos + 15 + j * 20)
+            feature_rect = feature_text.get_rect(left=features_x, top=features_start_y + 30 + j * 22)
             surface.blit(feature_text, feature_rect)
+
+        # 选中指示器
+        if is_selected:
+            indicator_size = 8
+            indicator_x = option_x - 20
+            indicator_y = y_pos + option_height // 2
+            pygame.draw.circle(surface, option['color'], (indicator_x, indicator_y), indicator_size)
+            pygame.draw.circle(surface, (255, 255, 255), (indicator_x, indicator_y), indicator_size - 2)
 
     def _draw_back_option(self, surface, y_pos, is_selected):
         """绘制返回选项"""
-        color = (255, 255, 100) if is_selected else (200, 200, 200)
+        color = (255, 255, 100) if is_selected else (180, 180, 180)
+        back_width = 220
+        back_height = 45
+        back_x = (self.config.SCREEN_W - back_width) // 2
+        back_rect = pygame.Rect(back_x, y_pos, back_width, back_height)
 
         if is_selected:
-            # 选中时的背景
-            back_rect = pygame.Rect(self.config.SCREEN_W // 2 - 100, y_pos - 5, 200, 40)
-            pygame.draw.rect(surface, (50, 50, 0), back_rect)
-            pygame.draw.rect(surface, color, back_rect, 2)
+            # 增强选中效果
+            # 发光边框
+            for i in range(3, 0, -1):
+                glow_size = i * 4
+                glow_rect = back_rect.inflate(glow_size, glow_size)
+                glow_color = tuple(int(c * (0.4 - i * 0.1)) for c in color)
+                pygame.draw.rect(surface, glow_color, glow_rect, 2)
 
+            # 渐变背景
+            for i in range(back_height):
+                ratio = i / back_height
+                bg_intensity = 0.15 + 0.1 * ratio
+                bg_color = tuple(int(c * bg_intensity) for c in color)
+                pygame.draw.line(surface, bg_color, (back_x, y_pos + i), (back_x + back_width, y_pos + i))
+
+            # 添加箭头动画
+            arrow_pulse = 0.5 + 0.3 * pygame.math.Vector2(1, 0).rotate(self.animation_time * self.pulse_speed * 180).x
+            arrow_color = tuple(int(c * arrow_pulse) for c in color)
+        else:
+            # 普通背景
+            pygame.draw.rect(surface, (40, 40, 40), back_rect)
+            arrow_color = color
+
+        # 边框
+        border_width = 3 if is_selected else 2
+        pygame.draw.rect(surface, color, back_rect, border_width, 5)
+
+        # 返回文本
         back_text = self.font_manager.render_text("← 返回主菜单", 'large', color)
-        back_rect = back_text.get_rect(center=(self.config.SCREEN_W // 2, y_pos + 15))
+        back_rect = back_text.get_rect(center=(self.config.SCREEN_W // 2, y_pos + back_height // 2))
         surface.blit(back_text, back_rect)
+
+        # 选中指示器
+        if is_selected:
+            indicator_size = 6
+            indicator_x = back_x - 15
+            indicator_y = y_pos + back_height // 2
+            pygame.draw.circle(surface, color, (indicator_x, indicator_y), indicator_size)
+            pygame.draw.circle(surface, (255, 255, 255), (indicator_x, indicator_y), indicator_size - 2)
 
     def _draw_controls_help(self, surface):
         """绘制控制提示"""
@@ -260,10 +352,28 @@ class DifficultySelection:
             "↑↓ 选择难度    回车 确认    ESC 返回"
         ]
 
+        # 控制提示背景
+        help_bg_height = 40
+        help_bg_rect = pygame.Rect(0, self.config.SCREEN_H - help_bg_height, 
+                                  self.config.SCREEN_W, help_bg_height)
+        
+        # 渐变背景
+        for i in range(help_bg_height):
+            ratio = i / help_bg_height
+            bg_value = 20 + int(15 * ratio)
+            pygame.draw.line(surface, (bg_value, bg_value, bg_value), 
+                            (0, self.config.SCREEN_H - help_bg_height + i), 
+                            (self.config.SCREEN_W, self.config.SCREEN_H - help_bg_height + i))
+
+        # 顶部边框
+        pygame.draw.line(surface, (60, 60, 60), 
+                        (0, self.config.SCREEN_H - help_bg_height),
+                        (self.config.SCREEN_W, self.config.SCREEN_H - help_bg_height))
+
         for i, text in enumerate(help_texts):
-            help_text = self.font_manager.render_text(text, 'help', (120, 120, 120))
+            help_text = self.font_manager.render_text(text, 'help', (150, 150, 150))
             help_rect = help_text.get_rect(center=(self.config.SCREEN_W // 2,
-                                                   self.config.SCREEN_H - 30 - i * 25))
+                                                   self.config.SCREEN_H - help_bg_height // 2))
             surface.blit(help_text, help_rect)
 
     def get_selected_difficulty(self):
