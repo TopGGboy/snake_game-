@@ -86,6 +86,13 @@ class LevelMode:
 
         # 调试选项
         self.debug_collision = False
+        
+        # UI显示状态
+        self.show_ui = True
+        
+        # 按键防抖
+        self.key_debounce = {}
+        self.debounce_delay = 200  # 200毫秒防抖延迟
 
         print(f"关卡模式初始化完成 - 关卡: {self.level_config.get('name', '未知')}, 目标分数: {self.target_score}")
 
@@ -279,20 +286,56 @@ class LevelMode:
 
     def _handle_input(self, keys):
         """处理额外的输入"""
+        # 处理功能键防抖
+        self._handle_debounced_keys(keys)
+    
+    def _handle_debounced_keys(self, keys):
+        """处理带防抖的功能键"""
+        current_time = pygame.time.get_ticks()
+        
         # F1 切换性能显示
         if keys[pygame.K_F1]:
-            self.performance_monitor.toggle_display()
-
+            if self._can_trigger_key('F1', current_time):
+                self.performance_monitor.toggle_display()
+                self.key_debounce['F1'] = current_time
+        
         # F3 切换碰撞区域调试显示
         if keys[pygame.K_F3]:
-            self.debug_collision = not self.debug_collision
-            print(f"碰撞区域调试: {'开启' if self.debug_collision else '关闭'}")
-
+            if self._can_trigger_key('F3', current_time):
+                self.debug_collision = not self.debug_collision
+                print(f"碰撞区域调试: {'开启' if self.debug_collision else '关闭'}")
+                self.key_debounce['F3'] = current_time
+        
         # F4 切换碰撞检测调试日志
         if keys[pygame.K_F4]:
-            from src.components.food import Food
-            Food.DEBUG_COLLISION = not Food.DEBUG_COLLISION
-            print(f"碰撞检测调试日志: {'开启' if Food.DEBUG_COLLISION else '关闭'}")
+            if self._can_trigger_key('F4', current_time):
+                from src.components.food import Food
+                Food.DEBUG_COLLISION = not Food.DEBUG_COLLISION
+                print(f"碰撞检测调试日志: {'开启' if Food.DEBUG_COLLISION else '关闭'}")
+                self.key_debounce['F4'] = current_time
+        
+        # M 键切换UI显示
+        if keys[pygame.K_m]:
+            if self._can_trigger_key('M', current_time):
+                self.show_ui = not self.show_ui
+                print(f"UI显示: {'开启' if self.show_ui else '关闭'}")
+                self.key_debounce['M'] = current_time
+        
+        # 按键释放时清除防抖计时器
+        if not keys[pygame.K_F1] and 'F1' in self.key_debounce:
+            del self.key_debounce['F1']
+        if not keys[pygame.K_F3] and 'F3' in self.key_debounce:
+            del self.key_debounce['F3']
+        if not keys[pygame.K_F4] and 'F4' in self.key_debounce:
+            del self.key_debounce['F4']
+        if not keys[pygame.K_m] and 'M' in self.key_debounce:
+            del self.key_debounce['M']
+    
+    def _can_trigger_key(self, key_name, current_time):
+        """检查按键是否可以触发（防抖逻辑）"""
+        if key_name not in self.key_debounce:
+            return True
+        return current_time - self.key_debounce[key_name] > self.debounce_delay
 
     def _check_collisions(self):
         """
@@ -381,52 +424,72 @@ class LevelMode:
         :param surface: 绘制表面
         :param text_color: 文本颜色
         """
-        # 绘制关卡信息
-        level_text = self.font_manager.render_text(f"关卡: {self.level_config.get('name', '未知')}", 'score',
-                                                   text_color)
-        surface.blit(level_text, (10, 10))
-
-        # 绘制分数
-        score_text = self.font_manager.render_text(f"分数: {self.score}/{self.target_score}", 'score', text_color)
-        surface.blit(score_text, (10, 50))
-
-        # 绘制蛇的长度
-        length_text = self.font_manager.render_text(f"长度: {self.snake.get_length()}", 'score', text_color)
-        surface.blit(length_text, (10, 90))
-
+        if not self.show_ui:
+            # 显示UI状态提示
+            ui_status_text = self.font_manager.render_text("UI: 隐藏 (M)", 'small', (200, 200, 200))
+            surface.blit(ui_status_text, (self.screen_width - 120, 10))
+            return
+        
+        # 左侧信息区域背景（半透明）
+        left_bg = pygame.Surface((160, 120))
+        left_bg.set_alpha(96)  # 37.5%透明度
+        left_bg.fill((0, 0, 0))
+        surface.blit(left_bg, (5, 5))
+        
+        # 右侧帮助区域背景（半透明）
+        right_bg = pygame.Surface((150, 120))
+        right_bg.set_alpha(96)  # 37.5%透明度
+        right_bg.fill((0, 0, 0))
+        surface.blit(right_bg, (self.screen_width - 155, 5))
+        
+        # 绘制关卡信息（简化显示）
+        level_name = self.level_config.get('name', '未知')
+        if len(level_name) > 4:
+            level_name = level_name[:4] + "..."
+        level_text = self.font_manager.render_text(f"{level_name}", 'small', text_color)
+        surface.blit(level_text, (15, 15))
+        
+        # 绘制分数（简化显示）
+        score_text = self.font_manager.render_text(f"{self.score}/{self.target_score}", 'small', text_color)
+        surface.blit(score_text, (15, 40))
+        
+        # 绘制蛇的长度（简化显示）
+        length_text = self.font_manager.render_text(f"L:{self.snake.get_length()}", 'small', text_color)
+        surface.blit(length_text, (15, 65))
+        
         # 绘制进度条
         self._draw_progress_bar(surface)
-
-        # 绘制控制提示
+        
+        # 绘制控制提示（简化显示）
         help_texts = [
-            "ESC/P: 暂停游戏",
-            "F1: 性能监控",
-            "F3: 碰撞调试",
-            "F4: 碰撞日志",
-            "方向键: 移动",
-            "空格键: 加速"
+            "ESC/P: 暂停",
+            "F1: 性能",
+            "F3: 碰撞",
+            "F4: 日志",
+            "M: UI切换",
+            "方向键: 移动"
         ]
-
+        
         for i, text in enumerate(help_texts):
-            help_surface = self.font_manager.render_text(text, 'small', (150, 150, 150))
-            surface.blit(help_surface, (self.screen_width - 150, 10 + i * 20))
+            help_surface = self.font_manager.render_text(text, 'small', (180, 180, 180))
+            surface.blit(help_surface, (self.screen_width - 145, 15 + i * 18))
 
     def _draw_progress_bar(self, surface):
         """绘制进度条"""
         progress = min(self.score / self.target_score, 1.0)
-        bar_width = 200
-        bar_height = 20
+        bar_width = 150
+        bar_height = 12
         bar_x = 10
-        bar_y = 130
+        bar_y = 90
 
         # 背景
         pygame.draw.rect(surface, (50, 50, 50), (bar_x, bar_y, bar_width, bar_height))
         # 进度
         pygame.draw.rect(surface, (0, 200, 0), (bar_x, bar_y, int(bar_width * progress), bar_height))
         # 边框
-        pygame.draw.rect(surface, (200, 200, 200), (bar_x, bar_y, bar_width, bar_height), 2)
+        pygame.draw.rect(surface, (200, 200, 200), (bar_x, bar_y, bar_width, bar_height), 1)
 
-        # 进度文本
+        # 进度文本（更小字体）
         progress_text = self.font_manager.render_text(f"{int(progress * 100)}%", 'small', (255, 255, 255))
         text_rect = progress_text.get_rect(center=(bar_x + bar_width // 2, bar_y + bar_height // 2))
         surface.blit(progress_text, text_rect)
