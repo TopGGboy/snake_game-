@@ -270,12 +270,12 @@ class DifficultySelection:
 
         # 描述
         desc_text = self.font_manager.render_text(option['description'], 'medium', (180, 180, 180))
-        desc_rect = desc_text.get_rect(left=option_x + 25, top=y_pos + 55)
+        desc_rect = desc_text.get_rect(left=option_x + 25, top=y_pos + 70)
         surface.blit(desc_text, desc_rect)
 
         # 特性列表（右侧区域）
         features_x = option_x + option_width // 2 + 10
-        features_start_y = y_pos + 20
+        features_start_y = y_pos
         
         # 特性标题
         features_title = self.font_manager.render_text("特性:", 'medium', (160, 160, 160) if not is_selected else (200, 200, 200))
