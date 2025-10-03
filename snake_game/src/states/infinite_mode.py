@@ -94,6 +94,13 @@ class InfiniteMode:
 
         # 调试选项
         self.debug_collision = False  # 是否显示碰撞区域
+        
+        # UI显示状态
+        self.show_ui = True  # 是否显示游戏状态信息
+        
+        # 按键防抖控制
+        self.key_debounce = {}  # 按键防抖计时器
+        self.debounce_delay = 200  # 防抖延迟时间（毫秒）
 
         print(f"无尽模式初始化完成 - 难度: {self.difficulty_config.get('name', '默认')}")
 
@@ -309,26 +316,46 @@ class InfiniteMode:
         self.performance_monitor.end_draw_timing()
 
     def _handle_input(self, keys):
-        """处理额外的输入"""
+        """处理额外的输入（带防抖）"""
+        current_time = pygame.time.get_ticks()
+        
+        # 防抖按键处理函数
+        def handle_debounced_key(key, callback):
+            if keys[key]:
+                if key not in self.key_debounce or current_time - self.key_debounce[key] > self.debounce_delay:
+                    self.key_debounce[key] = current_time
+                    callback()
+            else:
+                # 如果按键释放，清除防抖计时器
+                if key in self.key_debounce:
+                    del self.key_debounce[key]
+
         # F1 切换性能显示
-        if keys[pygame.K_F1]:
-            self.performance_monitor.toggle_display()
+        handle_debounced_key(pygame.K_F1, lambda: self.performance_monitor.toggle_display())
 
         # F2 切换动态速度
-        if keys[pygame.K_F2]:
-            self.dynamic_speed = not self.dynamic_speed
+        handle_debounced_key(pygame.K_F2, lambda: (
+            setattr(self, 'dynamic_speed', not self.dynamic_speed),
             print(f"动态速度调整: {'开启' if self.dynamic_speed else '关闭'}")
+        ))
 
         # F3 切换碰撞区域调试显示
-        if keys[pygame.K_F3]:
-            self.debug_collision = not self.debug_collision
+        handle_debounced_key(pygame.K_F3, lambda: (
+            setattr(self, 'debug_collision', not self.debug_collision),
             print(f"碰撞区域调试: {'开启' if self.debug_collision else '关闭'}")
+        ))
 
         # F4 切换碰撞检测调试日志
-        if keys[pygame.K_F4]:
-            from src.components.food import Food
-            Food.DEBUG_COLLISION = not Food.DEBUG_COLLISION
+        handle_debounced_key(pygame.K_F4, lambda: (
+            setattr(Food, 'DEBUG_COLLISION', not Food.DEBUG_COLLISION),
             print(f"碰撞检测调试日志: {'开启' if Food.DEBUG_COLLISION else '关闭'}")
+        ))
+
+        # M键切换UI显示状态
+        handle_debounced_key(pygame.K_m, lambda: (
+            setattr(self, 'show_ui', not self.show_ui),
+            print(f"游戏状态信息: {'显示' if self.show_ui else '隐藏'}")
+        ))
 
         # 移除旧的R键重新开始逻辑，现在由游戏结束菜单处理
         pass
@@ -410,52 +437,72 @@ class InfiniteMode:
 
     def _draw_ui(self, surface, text_color):
         """
-        绘制用户界面
+        绘制用户界面 - 优化版：更小、更透明，支持M键切换
         :param surface: 绘制表面
         :param text_color: 文本颜色
         """
-        # 绘制分数
-        score_text = self.font_manager.render_text(f"分数: {self.score}", 'score', text_color)
+        if not self.show_ui:
+            # 如果UI被隐藏，只显示一个小的状态指示器
+            indicator_text = self.font_manager.render_text("UI: 隐藏 (M)", 'small', (100, 100, 100))
+            surface.blit(indicator_text, (self.screen_width - 80, 10))
+            return
+
+        # 创建半透明背景层（更透明）
+        ui_bg = pygame.Surface((160, 120))
+        ui_bg.set_alpha(96)  # 37.5%透明度
+        ui_bg.fill((0, 0, 0))
+        surface.blit(ui_bg, (5, 5))
+
+        # 使用更小的字体
+        small_font = 'small'
+        
+        # 绘制分数信息（更紧凑的布局）
+        score_text = self.font_manager.render_text(f"{self.score}", small_font, text_color)
         surface.blit(score_text, (10, 10))
 
         # 绘制最高分
-        high_score_text = self.font_manager.render_text(f"最高分: {self.high_score}", 'score', text_color)
-        surface.blit(high_score_text, (10, 50))
+        high_score_text = self.font_manager.render_text(f"最高: {self.high_score}", small_font, text_color)
+        surface.blit(high_score_text, (10, 30))
 
         # 绘制蛇的长度
-        length_text = self.font_manager.render_text(f"长度: {self.snake.get_length()}", 'score', text_color)
-        surface.blit(length_text, (10, 90))
+        length_text = self.font_manager.render_text(f"长度: {self.snake.get_length()}", small_font, text_color)
+        surface.blit(length_text, (10, 50))
 
-        # 绘制难度信息
+        # 绘制难度信息（更简洁）
         difficulty_color = self._get_difficulty_color()
-        difficulty_text = self.font_manager.render_text(f"难度: {self.difficulty_config['name']}", 'medium',
-                                                        difficulty_color)
-        surface.blit(difficulty_text, (10, 130))
+        difficulty_text = self.font_manager.render_text(f"{self.difficulty_config['name'][:4]}", small_font, difficulty_color)
+        surface.blit(difficulty_text, (10, 70))
 
         # 绘制速度信息
         current_speed = self.snake.get_current_speed()
-        speed_text = self.font_manager.render_text(f"速度: {current_speed:.0f}", 'medium', text_color)
-        surface.blit(speed_text, (10, 160))
+        speed_text = self.font_manager.render_text(f"{current_speed:.0f}", small_font, text_color)
+        surface.blit(speed_text, (10, 90))
 
-        # 绘制加速状态
+        # 绘制加速状态（更小的图标）
         if self.snake.is_boost_active():
-            boost_text = self.font_manager.render_text("🚀 加速中", 'medium', (255, 255, 0))
-            surface.blit(boost_text, (10, 190))
+            boost_text = self.font_manager.render_text("🚀", small_font, (255, 255, 0))
+            surface.blit(boost_text, (10, 110))
 
-        # 绘制控制提示
+        # 绘制控制提示（更简洁的版本）
         help_texts = [
-            "ESC/P: 暂停游戏",
-            "F1: 性能监控",
-            "F2: 动态速度",
-            "F3: 碰撞调试",
-            "F4: 碰撞日志",
+            "ESC/P: 暂停",
+            "F1: 性能",
+            "F2: 速度",
+            "F3: 调试",
+            "M: UI切换",
             "方向键: 移动",
-            "空格键: 加速"
+            "空格: 加速"
         ]
 
+        # 创建右侧半透明背景（更透明）
+        help_bg = pygame.Surface((110, 140))
+        help_bg.set_alpha(96)  # 37.5%透明度
+        help_bg.fill((0, 0, 0))
+        surface.blit(help_bg, (self.screen_width - 115, 5))
+
         for i, text in enumerate(help_texts):
-            help_surface = self.font_manager.render_text(text, 'small', (150, 150, 150))
-            surface.blit(help_surface, (self.screen_width - 150, 10 + i * 20))
+            help_surface = self.font_manager.render_text(text, small_font, (150, 150, 150))
+            surface.blit(help_surface, (self.screen_width - 110, 10 + i * 18))
 
     def _draw_game_over(self, surface):
         """绘制游戏结束界面"""
