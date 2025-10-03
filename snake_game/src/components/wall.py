@@ -26,25 +26,69 @@ class Wall(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.center = (int(self.position[0]), int(self.position[1]))
 
-        # 墙块颜色配置
+        # 墙块颜色配置（用于阴影和发光效果）
         self.colors = {
-            'fill': (100, 100, 100),  # 灰色填充
-            'border': (60, 60, 60),  # 深灰色边框
-            'highlight': (150, 150, 150),  # 浅灰色高光
-            'shadow': (40, 40, 40)  # 阴影色
+            'shadow': (20, 30, 50, 120),     # 半透明深蓝阴影
+            'glow': (80, 100, 140, 60),      # 半透明蓝光效果
+            'highlight': (140, 160, 180, 80) # 高光效果
         }
 
     def _create_image(self) -> None:
         """创建墙块图像"""
-        self.image = pygame.Surface((self.grid_size, self.grid_size))
-        self.image.fill((100, 100, 100))  # 灰色填充
-
-        # 添加边框
-        pygame.draw.rect(self.image, (60, 60, 60), self.image.get_rect(), 2)
-
-        # 添加高光效果（左上角）
-        highlight_rect = pygame.Rect(2, 2, self.grid_size // 3, self.grid_size // 3)
-        pygame.draw.rect(self.image, (150, 150, 150), highlight_rect)
+        self.image = pygame.Surface((self.grid_size, self.grid_size), pygame.SRCALPHA)
+        
+        # 现代配色方案 - 深蓝灰色系
+        brick_color = (70, 80, 100)        # 主砖块颜色 - 深蓝灰
+        mortar_color = (50, 60, 80)        # 砖缝颜色 - 更深蓝灰
+        highlight_color = (120, 140, 160)   # 高光颜色 - 浅蓝灰
+        shadow_color = (30, 40, 60)        # 阴影颜色 - 深蓝黑
+        
+        # 创建渐变背景效果
+        for y in range(self.grid_size):
+            # 从顶部到底部的渐变
+            factor = y / self.grid_size
+            r = int(brick_color[0] * (1 - factor * 0.3))
+            g = int(brick_color[1] * (1 - factor * 0.3))
+            b = int(brick_color[2] * (1 - factor * 0.3))
+            pygame.draw.line(self.image, (r, g, b), (0, y), (self.grid_size, y))
+        
+        # 添加砖块纹理效果
+        # 水平分割线
+        pygame.draw.line(self.image, mortar_color, (0, self.grid_size//2), 
+                         (self.grid_size, self.grid_size//2), 2)
+        
+        # 垂直分割线（交错排列，更自然的砖墙效果）
+        if self.grid_size >= 30:
+            # 第一行砖块
+            pygame.draw.line(self.image, mortar_color, (self.grid_size//3, 0), 
+                             (self.grid_size//3, self.grid_size//2), 2)
+            pygame.draw.line(self.image, mortar_color, (2*self.grid_size//3, 0), 
+                             (2*self.grid_size//3, self.grid_size//2), 2)
+            
+            # 第二行砖块（交错排列）
+            pygame.draw.line(self.image, mortar_color, (self.grid_size//6, self.grid_size//2), 
+                             (self.grid_size//6, self.grid_size), 2)
+            pygame.draw.line(self.image, mortar_color, (self.grid_size//2, self.grid_size//2), 
+                             (self.grid_size//2, self.grid_size), 2)
+            pygame.draw.line(self.image, mortar_color, (5*self.grid_size//6, self.grid_size//2), 
+                             (5*self.grid_size//6, self.grid_size), 2)
+        
+        # 增强3D立体效果
+        # 左上角高光（更柔和）
+        for i in range(3):
+            alpha = 100 - i * 30
+            highlight = (highlight_color[0], highlight_color[1], highlight_color[2], alpha)
+            pygame.draw.line(self.image, highlight, (i, i), (self.grid_size-i, i), 1)
+            pygame.draw.line(self.image, highlight, (i, i), (i, self.grid_size-i), 1)
+        
+        # 右下角阴影（更柔和）
+        for i in range(3):
+            alpha = 100 - i * 30
+            shadow = (shadow_color[0], shadow_color[1], shadow_color[2], alpha)
+            pygame.draw.line(self.image, shadow, (self.grid_size-1-i, i), 
+                             (self.grid_size-1-i, self.grid_size-i), 1)
+            pygame.draw.line(self.image, shadow, (i, self.grid_size-1-i), 
+                             (self.grid_size-i, self.grid_size-1-i), 1)
 
     def check_collision(self, position: Tuple[float, float], radius: float) -> bool:
         """
@@ -72,14 +116,39 @@ class Wall(pygame.sprite.Sprite):
         :param surface: 绘制表面
         :param debug_collision: 是否绘制碰撞区域调试信息
         """
-        # 绘制阴影效果
-        shadow_pos = (int(self.position[0] - self.grid_size // 2 + 2),
-                      int(self.position[1] - self.grid_size // 2 + 2))
-        shadow_rect = pygame.Rect(shadow_pos[0], shadow_pos[1], self.grid_size, self.grid_size)
-        pygame.draw.rect(surface, self.colors['shadow'], shadow_rect)
+        # 绘制柔和阴影效果
+        shadow_surface = pygame.Surface((self.grid_size, self.grid_size), pygame.SRCALPHA)
+        shadow_color = self.colors['shadow']
+        pygame.draw.rect(shadow_surface, shadow_color, 
+                         (0, 0, self.grid_size, self.grid_size), border_radius=3)
+        
+        shadow_pos = (int(self.position[0] - self.grid_size // 2 + 3),
+                      int(self.position[1] - self.grid_size // 2 + 3))
+        surface.blit(shadow_surface, shadow_pos)
 
         # 绘制主体墙块
         surface.blit(self.image, self.rect)
+
+        # 添加多层发光边框效果
+        # 外层发光（柔和蓝色光晕）
+        outer_glow = pygame.Surface((self.grid_size + 8, self.grid_size + 8), pygame.SRCALPHA)
+        pygame.draw.rect(outer_glow, self.colors['glow'], 
+                         (0, 0, self.grid_size + 8, self.grid_size + 8), 
+                         border_radius=7, width=3)
+        
+        outer_pos = (int(self.position[0] - (self.grid_size + 8) // 2),
+                     int(self.position[1] - (self.grid_size + 8) // 2))
+        surface.blit(outer_glow, outer_pos)
+        
+        # 内层高光（精致边框）
+        inner_highlight = pygame.Surface((self.grid_size + 2, self.grid_size + 2), pygame.SRCALPHA)
+        pygame.draw.rect(inner_highlight, self.colors['highlight'], 
+                         (0, 0, self.grid_size + 2, self.grid_size + 2), 
+                         border_radius=4, width=1)
+        
+        inner_pos = (int(self.position[0] - (self.grid_size + 2) // 2),
+                     int(self.position[1] - (self.grid_size + 2) // 2))
+        surface.blit(inner_highlight, inner_pos)
 
         # 调试：绘制碰撞圆圈
         if debug_collision:
