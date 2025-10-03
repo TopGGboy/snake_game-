@@ -8,6 +8,7 @@ from ..configs.difficulty_loader import get_difficulty_loader
 from ..utils.grid_utils import GridUtils
 from ..utils.performance_monitor import PerformanceMonitor
 from ..utils.font_manager import get_font_manager
+from ..utils.sound_manager import SoundManager
 from .pause_menu import PauseMenu
 from .game_over_menu import GameOverMenu
 
@@ -44,16 +45,24 @@ class InfiniteMode:
 
         # 图片管理器现在由ImageManager自动处理
 
+        # 获取屏幕尺寸
+        self.config = Config.get_instance()
+        self.screen_width = self.config.SCREEN_W
+        self.screen_height = self.config.SCREEN_H
+
+        # 声音管理器
+        self.sound_manager = SoundManager.get_instance()
+        # 预加载音效
+        self.sound_manager.initialize_preloading()
+
         # 创建蛇实例，应用皮肤
         # 将皮肤名称转换为整数ID（如 "snake1" -> 1）
         skin_id = self._parse_skin_id(skin_name)
         print(f"创建蛇实例，皮肤名称: {skin_name}, 皮肤ID: {skin_id}")
         self.snake = Snake("snake0", skin_id=skin_id)
-
-        # 获取屏幕尺寸
-        self.config = Config.get_instance()
-        self.screen_width = self.config.SCREEN_W
-        self.screen_height = self.config.SCREEN_H
+        
+        # 为蛇实例设置声音管理器
+        self.snake.sound_manager = self.sound_manager
 
         # 根据JSON配置设置游戏参数
         self._apply_json_config()
@@ -300,6 +309,8 @@ class InfiniteMode:
                 actual_score = int(score_gained * getattr(self, 'score_multiplier', 1.0))
                 self.score += actual_score
                 self.high_score = max(self.high_score, self.score)
+                # 播放吃食物音效
+                self.sound_manager.play_eat_sound()
                 print(f"得分: {self.score}, 蛇长度: {self.snake.get_length()}")
 
             # 检查其他碰撞
@@ -368,6 +379,8 @@ class InfiniteMode:
         if getattr(self, 'self_collision', True) and self.snake.check_self_collision():
             self.snake.is_dead = True
             self.game_over = True
+            # 播放死亡音效
+            self.sound_manager.play_game_over_sound()
             print(f"游戏结束：蛇撞到自己了！最终得分: {self.score}")
             return
 
@@ -377,6 +390,8 @@ class InfiniteMode:
             if self.wall_manager.check_collision(snake_head_pos, self.snake.config.collision_radius):
                 self.snake.is_dead = True
                 self.game_over = True
+                # 播放死亡音效
+                self.sound_manager.play_game_over_sound()
                 print(f"游戏结束：蛇撞到墙壁了！最终得分: {self.score}")
                 return
 
@@ -385,6 +400,8 @@ class InfiniteMode:
             if self.snake.check_boundary_collision(screen_width=self.screen_width, screen_height=self.screen_height):
                 self.snake.is_dead = True
                 self.game_over = True
+                # 播放死亡音效
+                self.sound_manager.play_game_over_sound()
                 print(f"游戏结束：蛇撞到边界了！最终得分: {self.score}")
                 return
 

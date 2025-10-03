@@ -36,11 +36,11 @@ class Game:
         self.selected_difficulty = None  # 存储选中的难度配置
         self.selected_skin = None  # 存储选中的皮肤配置
         self.selected_level = None  # 存储选中的关卡配置
-        
+
         # 初始化声音管理器并预加载所有音乐
         self.sound_manager = SoundManager.get_instance()
         self.sound_manager.initialize_preloading()  # 预加载所有音乐文件
-        
+
         # 直接播放预加载的主界面音乐（使用预加载机制）
         self.sound_manager.switch_to_main_music()
 

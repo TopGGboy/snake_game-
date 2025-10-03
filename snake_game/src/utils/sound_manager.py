@@ -23,6 +23,10 @@ class SoundManager:
         # 预加载的音乐缓存
         self.music_cache = {}  # {music_type: music_path}
         self.preloaded_music = {}  # {music_type: loaded_music_object}
+        
+        # 音效相关属性
+        self.sound_effects = {}  # 音效缓存 {sound_name: sound_object}
+        self.sound_volume = 0.7  # 音效默认音量
 
     @classmethod
     def get_instance(cls):
@@ -209,9 +213,69 @@ class SoundManager:
         return self.current_music_type
 
     def initialize_preloading(self):
-        """初始化预加载所有游戏音乐"""
+        """初始化预加载所有游戏音乐和音效"""
         # 预加载主界面音乐
         self.preload_music("assets/sound/main.mp3", "main")
         # 预加载游戏音乐
         self.preload_music("assets/sound/run_background.mp3", "game")
-        print("游戏音乐预加载完成")
+        
+        # 预加载音效
+        self.preload_sound_effect("assets/sound/eat.mp3", "eat")
+        self.preload_sound_effect("assets/sound/high_speed.mp3", "high_speed")
+        self.preload_sound_effect("assets/sound/game_over.mp3", "game_over")
+        
+        print("游戏音乐和音效预加载完成")
+
+    def preload_sound_effect(self, sound_path, sound_name):
+        """预加载音效到缓存"""
+        if os.path.exists(sound_path):
+            try:
+                sound = pygame.mixer.Sound(sound_path)
+                self.sound_effects[sound_name] = sound
+                print(f"音效已预加载: {sound_path} (名称: {sound_name})")
+                return True
+            except Exception as e:
+                print(f"预加载音效失败: {e}")
+                return False
+        else:
+            print(f"音效文件不存在: {sound_path}")
+            return False
+
+    def play_sound_effect(self, sound_name):
+        """播放音效"""
+        if sound_name in self.sound_effects:
+            try:
+                sound = self.sound_effects[sound_name]
+                sound.set_volume(self.sound_volume)
+                sound.play()
+                print(f"播放音效: {sound_name}")
+                return True
+            except Exception as e:
+                print(f"播放音效失败: {e}")
+                return False
+        else:
+            print(f"音效未找到: {sound_name}")
+            return False
+
+    def set_sound_volume(self, volume):
+        """设置音效音量 (0.0 到 1.0)"""
+        if 0.0 <= volume <= 1.0:
+            self.sound_volume = volume
+            return True
+        return False
+
+    def get_sound_volume(self):
+        """获取当前音效音量"""
+        return self.sound_volume
+
+    def play_eat_sound(self):
+        """播放吃食物音效"""
+        return self.play_sound_effect("eat")
+
+    def play_high_speed_sound(self):
+        """播放加速音效"""
+        return self.play_sound_effect("high_speed")
+
+    def play_game_over_sound(self):
+        """播放游戏结束音效"""
+        return self.play_sound_effect("game_over")

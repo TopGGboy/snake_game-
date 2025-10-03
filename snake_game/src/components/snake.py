@@ -14,6 +14,7 @@ from ..configs.config import Config
 from ..configs.game_balance import GameBalance
 from ..configs.skin_config import get_snake_colors, get_snake_color_config
 from ..utils.image_manager import get_image_manager
+from ..utils.sound_manager import SoundManager
 
 
 class SnakeConfig:
@@ -176,7 +177,12 @@ class Snake(pygame.sprite.Sprite):
             self.input_direction[1] += 1
 
         # 检查加速按键（空格键）
+        was_boosting = self.is_boosting
         self.is_boosting = keys[pygame.K_SPACE]
+        
+        # 如果加速状态发生变化（从非加速变为加速），播放加速音效
+        if self.is_boosting and not was_boosting:
+            self.sound_manager.play_high_speed_sound()
 
         # 计算目标角度并开始移动
         if self.input_direction[0] != 0 or self.input_direction[1] != 0:

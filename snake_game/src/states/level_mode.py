@@ -11,6 +11,7 @@ from ..configs.level_loader import get_level_loader
 from ..utils.grid_utils import GridUtils
 from ..utils.performance_monitor import PerformanceMonitor
 from ..utils.font_manager import get_font_manager
+from ..utils.sound_manager import SoundManager
 from .level_loading import LevelLoadingScreen
 from .level_pause_menu import LevelPauseMenu
 from .level_game_over import LevelGameOverMenu
@@ -52,10 +53,18 @@ class LevelMode:
         self.screen_width = self.config.SCREEN_W
         self.screen_height = self.config.SCREEN_H
 
+        # 声音管理器
+        self.sound_manager = SoundManager.get_instance()
+        # 预加载音效
+        self.sound_manager.initialize_preloading()
+
         # 创建蛇实例，使用全局配置中的皮肤ID
         skin_id = self.config.get_skin_id()
         print(f"创建蛇实例，使用全局皮肤ID: {skin_id}")
         self.snake = Snake("snake0", skin_id=skin_id)
+        
+        # 为蛇实例设置声音管理器
+        self.snake.sound_manager = self.sound_manager
 
         # 应用关卡配置
         self._apply_level_config()
@@ -282,6 +291,8 @@ class LevelMode:
                 # 应用分数倍率
                 actual_score = int(score_gained * getattr(self, 'score_multiplier', 1.0))
                 self.score += actual_score
+                # 播放吃食物音效
+                self.sound_manager.play_eat_sound()
                 print(f"得分: {self.score}, 蛇长度: {self.snake.get_length()}")
 
             # 检查其他碰撞
@@ -358,6 +369,8 @@ class LevelMode:
         if getattr(self, 'self_collision', True) and self.snake.check_self_collision():
             self.snake.is_dead = True
             self.game_over = True
+            # 播放死亡音效
+            self.sound_manager.play_game_over_sound()
             # 立即切换到游戏结束状态
             self.state_manager.set_state(self.state_manager.STATE_GAME_OVER)
             self.state_manager.level_game_over.set_level_info(self.current_level_index + 1, len(self.available_levels),
@@ -371,6 +384,8 @@ class LevelMode:
             if self.wall_manager.check_collision(snake_head_pos, self.snake.config.collision_radius):
                 self.snake.is_dead = True
                 self.game_over = True
+                # 播放死亡音效
+                self.sound_manager.play_game_over_sound()
                 # 立即切换到游戏结束状态
                 self.state_manager.set_state(self.state_manager.STATE_GAME_OVER)
                 self.state_manager.level_game_over.set_level_info(self.current_level_index + 1, len(self.available_levels),
@@ -383,6 +398,8 @@ class LevelMode:
             if self.snake.check_boundary_collision(screen_width=self.screen_width, screen_height=self.screen_height):
                 self.snake.is_dead = True
                 self.game_over = True
+                # 播放死亡音效
+                self.sound_manager.play_game_over_sound()
                 # 立即切换到游戏结束状态
                 self.state_manager.set_state(self.state_manager.STATE_GAME_OVER)
                 self.state_manager.level_game_over.set_level_info(self.current_level_index + 1, len(self.available_levels),
