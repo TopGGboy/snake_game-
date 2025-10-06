@@ -168,31 +168,63 @@ class MainMenu:
         title_font = self.font_manager.get_font('title')
         
         # 创建标题表面
-        title_surface = pygame.Surface((self.config.SCREEN_W, 100), pygame.SRCALPHA)
+        title_surface = pygame.Surface((self.config.SCREEN_W, 120), pygame.SRCALPHA)
         
-        # 绘制渐变标题
+        # 计算标题总宽度以实现居中
+        total_width = 0
+        char_surfaces = []
+        for char in title_text:
+            char_surface = title_font.render(char, True, (255, 255, 255))  # 临时颜色计算宽度
+            total_width += char_surface.get_width()
+            char_surfaces.append(char_surface)
+        
+        # 计算起始x坐标以实现居中
+        start_x = (self.config.SCREEN_W - total_width - (len(title_text) - 1) * 15) // 2
+        
+        # 绘制渐变标题 - 使用更明显的颜色对比
         for i, char in enumerate(title_text):
-            # 计算字符的渐变颜色
-            char_ratio = i / len(title_text)
+            # 计算字符的渐变颜色 - 增强对比度
+            char_ratio = i / (len(title_text) - 1) if len(title_text) > 1 else 0
             r = int(self.colors['title_gradient_start'][0] * (1 - char_ratio) + self.colors['title_gradient_end'][0] * char_ratio)
             g = int(self.colors['title_gradient_start'][1] * (1 - char_ratio) + self.colors['title_gradient_end'][1] * char_ratio)
             b = int(self.colors['title_gradient_start'][2] * (1 - char_ratio) + self.colors['title_gradient_end'][2] * char_ratio)
             
+            # 添加动画效果 - 字符轻微浮动
+            float_offset = math.sin(self.animation_time * 0.05 + i * 0.5) * 3
+            
             # 渲染单个字符
             char_surface = title_font.render(char, True, (r, g, b))
             char_rect = char_surface.get_rect()
-            char_rect.x = i * 80 + 50
-            char_rect.y = 20
+            char_rect.x = start_x + sum([char_surfaces[j].get_width() for j in range(i)]) + i * 15  # 动态计算位置
+            char_rect.y = 30 + float_offset
             
-            # 添加发光效果
-            glow_surface = title_font.render(char, True, (r, g, b, 100))
-            for offset in [(1, 1), (-1, -1), (1, -1), (-1, 1)]:
+            # 增强发光效果
+            glow_intensity = 150 + int(math.sin(self.animation_time * 0.1 + i) * 50)
+            glow_surface = title_font.render(char, True, (r, g, b, glow_intensity))
+            
+            # 多层发光效果
+            for offset in [(2, 2), (-2, -2), (2, -2), (-2, 2), (0, 3), (0, -3)]:
                 glow_rect = char_rect.copy()
-                glow_rect.x += offset[0] * 2
-                glow_rect.y += offset[1] * 2
+                glow_rect.x += offset[0]
+                glow_rect.y += offset[1]
                 title_surface.blit(glow_surface, glow_rect)
             
+            # 添加外发光
+            outer_glow = title_font.render(char, True, (255, 255, 200, 80))
+            for offset in [(3, 3), (-3, -3), (3, -3), (-3, 3)]:
+                glow_rect = char_rect.copy()
+                glow_rect.x += offset[0]
+                glow_rect.y += offset[1]
+                title_surface.blit(outer_glow, glow_rect)
+            
             title_surface.blit(char_surface, char_rect)
+        
+        # 添加标题背景光晕
+        glow_radius = 100 + int(math.sin(self.animation_time * 0.08) * 20)
+        glow_surface = pygame.Surface((glow_radius * 2, glow_radius * 2), pygame.SRCALPHA)
+        pygame.draw.circle(glow_surface, (255, 200, 100, 30), (glow_radius, glow_radius), glow_radius)
+        glow_rect = glow_surface.get_rect(center=(self.config.SCREEN_W // 2, 60))
+        surface.blit(glow_surface, glow_rect)
         
         # 定位标题
         title_rect = title_surface.get_rect(center=(self.config.SCREEN_W // 2, 120))
