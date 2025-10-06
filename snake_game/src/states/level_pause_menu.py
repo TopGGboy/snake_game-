@@ -8,7 +8,7 @@ from src.utils.font_manager import get_font_manager
 
 class LevelPauseMenu:
     def __init__(self, screen_width=None, screen_height=None, game_state=None, current_level=1, total_levels=10,
-                 is_victory=False):
+                 is_victory=False, level_selection_callback=None):
         """
         初始化关卡暂停界面
         :param screen_width: 屏幕宽度
@@ -50,6 +50,9 @@ class LevelPauseMenu:
         # 界面状态
         self.action = None  # 'resume', 'restart', 'previous_level', 'next_level', 'level_select', 'main_menu', 'quit'
         self.finished = False
+        
+        # 关卡选择回调函数
+        self.level_selection_callback = level_selection_callback
 
         # 动画效果
         self.fade_alpha = 0
@@ -117,7 +120,8 @@ class LevelPauseMenu:
             self.action = 'next_level'
             self.finished = True
         elif option_text == "选择关卡":
-            self.action = 'level_select'
+            # 设置动作为关卡选择，让游戏主循环处理状态切换
+            self.action = 'level_selection'
             self.finished = True
         elif option_text == "返回主菜单":
             self.action = 'main_menu'
@@ -318,6 +322,10 @@ class LevelPauseMenu:
         """设置关卡信息"""
         self.current_level = current_level
         self.total_levels = total_levels
+        
+    def set_level_selection_callback(self, callback):
+        """设置关卡选择回调函数"""
+        self.level_selection_callback = callback
 
     def set_victory_mode(self, is_victory=True):
         """设置是否为胜利模式"""

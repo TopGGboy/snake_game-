@@ -132,6 +132,10 @@ class LevelStateManager:
             elif action == 'main_menu':
                 self.level_mode.finished = True
                 self.level_mode.next = 'main_menu'
+            elif action == 'level_selection':
+                # 切换到关卡选择界面
+                self.level_mode.finished = True
+                self.level_mode.next = 'level_selection'
             elif action == 'quit':
                 pygame.quit()
                 quit()
@@ -152,6 +156,10 @@ class LevelStateManager:
                 self.level_mode._go_to_previous_level()
                 # 确保状态管理器回到游戏状态，让主循环处理关卡切换
                 self.set_state(self.STATE_GAME)
+            elif action == 'level_select':
+                # 切换到关卡选择界面
+                self.level_mode.finished = True
+                self.level_mode.next = 'level_selection'
             elif action == 'main_menu':
                 self.level_mode.finished = True
                 self.level_mode.next = 'main_menu'
