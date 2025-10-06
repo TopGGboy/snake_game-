@@ -111,40 +111,23 @@ class GameOverMenu:
         overlay.fill((20, 0, 0))  # 深红色覆盖层
         surface.blit(overlay, (0, 0))
         
-        # 绘制游戏结束标题（带脉动效果）
+        # 绘制游戏结束标题 - 左上角
         pulse_scale = 1.0 + 0.1 * abs(pygame.math.Vector2(0, 1).rotate(self.pulse_time * self.pulse_speed * 180).y)
         title_color_intensity = int(200 + 55 * abs(pygame.math.Vector2(0, 1).rotate(self.pulse_time * self.pulse_speed * 180).y))
         title_color = (255, title_color_intensity, title_color_intensity)
         
         title_text = self.font_manager.render_text("游戏结束", 'title', title_color)
-        # 简单的缩放效果（通过调整位置模拟）
-        title_rect = title_text.get_rect(center=(self.config.SCREEN_W // 2, 100))
+        title_rect = title_text.get_rect(topleft=(50, 50))
         surface.blit(title_text, title_rect)
         
-        # 绘制游戏统计信息
+        # 绘制游戏统计信息 - 右上角面板
         if self.game_state:
             self._draw_game_stats(surface)
         
-        # 绘制菜单选项
-        menu_start_y = 320
-        for i, option in enumerate(self.menu_options):
-            # 选中项高亮显示
-            if i == self.selected_option:
-                color = (255, 255, 100)  # 黄色高亮
-                # 绘制选中背景
-                option_bg = pygame.Surface((280, 45))
-                option_bg.set_alpha(120)
-                option_bg.fill((255, 100, 100))  # 红色背景
-                bg_rect = option_bg.get_rect(center=(self.config.SCREEN_W // 2, menu_start_y + i * 55))
-                surface.blit(option_bg, bg_rect)
-            else:
-                color = (220, 220, 220)  # 普通白色
-            
-            option_text = self.font_manager.render_text(option, 'menu', color)
-            option_rect = option_text.get_rect(center=(self.config.SCREEN_W // 2, menu_start_y + i * 55))
-            surface.blit(option_text, option_rect)
+        # 绘制菜单选项 - 左侧垂直布局
+        self._draw_menu_options(surface)
         
-        # 绘制控制提示
+        # 绘制控制提示 - 右下角
         self._draw_controls_help(surface)
 
     def _draw_game_stats(self, surface):
@@ -152,42 +135,101 @@ class GameOverMenu:
         绘制游戏统计信息
         :param surface: 绘制表面
         """
-        stats_y = 180
+        # 创建右上角统计面板
+        panel_width = 300
+        panel_height = 200
+        panel_x = self.config.SCREEN_W - panel_width - 50
+        panel_y = 80
+        
+        # 绘制半透明背景面板
+        panel = pygame.Surface((panel_width, panel_height), pygame.SRCALPHA)
+        panel.fill((0, 0, 0, 150))
+        pygame.draw.rect(panel, (255, 100, 100, 200), panel.get_rect(), 2)
+        surface.blit(panel, (panel_x, panel_y))
+        
+        stats_y = panel_y + 20
         stats_color = (255, 200, 200)  # 淡红色
         
         # 最终得分（突出显示）
         if hasattr(self.game_state, 'score'):
-            final_score_text = self.font_manager.render_text(f"最终得分: {self.game_state.score}", 'xlarge', (255, 255, 100))
-            score_rect = final_score_text.get_rect(center=(self.config.SCREEN_W // 2, stats_y))
+            final_score_text = self.font_manager.render_text(f"最终得分: {self.game_state.score}", 'large', (255, 255, 100))
+            score_rect = final_score_text.get_rect(topleft=(panel_x + 20, stats_y))
             surface.blit(final_score_text, score_rect)
         
         # 其他统计信息
-        stats_y += 50
+        stats_y += 40
         if hasattr(self.game_state, 'high_score'):
-            high_score_text = self.font_manager.render_text(f"历史最高: {self.game_state.high_score}", 'large', stats_color)
-            high_score_rect = high_score_text.get_rect(center=(self.config.SCREEN_W // 2, stats_y))
+            high_score_text = self.font_manager.render_text(f"历史最高: {self.game_state.high_score}", 'medium', stats_color)
+            high_score_rect = high_score_text.get_rect(topleft=(panel_x + 20, stats_y))
             surface.blit(high_score_text, high_score_rect)
         
-        stats_y += 35
+        stats_y += 30
         if hasattr(self.game_state, 'snake') and hasattr(self.game_state.snake, 'get_length'):
             length_text = self.font_manager.render_text(f"蛇身长度: {self.game_state.snake.get_length()}", 'medium', stats_color)
-            length_rect = length_text.get_rect(center=(self.config.SCREEN_W // 2, stats_y))
+            length_rect = length_text.get_rect(topleft=(panel_x + 20, stats_y))
             surface.blit(length_text, length_rect)
         
         stats_y += 30
         if hasattr(self.game_state, 'difficulty_config'):
             difficulty_name = self.game_state.difficulty_config.get('name', '未知')
             difficulty_text = self.font_manager.render_text(f"难度: {difficulty_name}", 'medium', stats_color)
-            difficulty_rect = difficulty_text.get_rect(center=(self.config.SCREEN_W // 2, stats_y))
+            difficulty_rect = difficulty_text.get_rect(topleft=(panel_x + 20, stats_y))
             surface.blit(difficulty_text, difficulty_rect)
+
+    def _draw_menu_options(self, surface):
+        """
+        绘制菜单选项 - 左侧垂直布局
+        :param surface: 绘制表面
+        """
+        # 创建左侧菜单面板
+        panel_width = 280
+        panel_height = 200
+        panel_x = 50
+        panel_y = 150
+        
+        # 绘制半透明背景面板
+        panel = pygame.Surface((panel_width, panel_height), pygame.SRCALPHA)
+        panel.fill((0, 0, 0, 150))
+        pygame.draw.rect(panel, (100, 100, 255, 200), panel.get_rect(), 2)
+        surface.blit(panel, (panel_x, panel_y))
+        
+        menu_start_y = panel_y + 20
+        for i, option in enumerate(self.menu_options):
+            option_y = menu_start_y + i * 45
+            
+            # 选中项高亮显示
+            if i == self.selected_option:
+                color = (255, 255, 100)  # 黄色高亮
+                # 绘制选中背景
+                option_bg = pygame.Surface((panel_width - 40, 35), pygame.SRCALPHA)
+                option_bg.fill((255, 100, 100, 120))  # 红色背景
+                surface.blit(option_bg, (panel_x + 20, option_y + 15))
+            else:
+                color = (220, 220, 220)  # 普通白色
+            
+            option_text = self.font_manager.render_text(option, 'menu', color)
+            option_rect = option_text.get_rect(topleft=(panel_x + 30, option_y + 5))
+            surface.blit(option_text, option_rect)
 
     def _draw_controls_help(self, surface):
         """
-        绘制控制提示
+        绘制控制提示 - 右下角
         :param surface: 绘制表面
         """
-        help_y = 500
-        help_color = (180, 180, 180)
+        # 创建右下角控制提示面板
+        panel_width = 300
+        panel_height = 100
+        panel_x = self.config.SCREEN_W - panel_width - 50
+        panel_y = self.config.SCREEN_H - panel_height - 50
+        
+        # 绘制半透明背景面板
+        panel = pygame.Surface((panel_width, panel_height), pygame.SRCALPHA)
+        panel.fill((0, 0, 0, 150))
+        pygame.draw.rect(panel, (100, 255, 100, 200), panel.get_rect(), 2)
+        surface.blit(panel, (panel_x, panel_y))
+        
+        help_y = panel_y + 20
+        help_color = (180, 255, 180)
         
         help_texts = [
             "↑↓ 或 W/S: 选择选项",
@@ -197,7 +239,7 @@ class GameOverMenu:
         
         for i, text in enumerate(help_texts):
             help_surface = self.font_manager.render_text(text, 'help', help_color)
-            help_rect = help_surface.get_rect(center=(self.config.SCREEN_W // 2, help_y + i * 25))
+            help_rect = help_surface.get_rect(topleft=(panel_x + 20, help_y + i * 25))
             surface.blit(help_surface, help_rect)
 
     def get_action(self):

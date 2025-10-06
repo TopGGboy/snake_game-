@@ -145,7 +145,7 @@ class LevelGameOverMenu:
 
     def draw(self, surface):
         """
-        绘制界面
+        绘制界面 - 采用分散布局避免上下布局
         :param surface: 绘制表面
         """
         # 创建半透明覆盖层
@@ -159,7 +159,7 @@ class LevelGameOverMenu:
             
         surface.blit(overlay, (0, 0))
         
-        # 绘制标题
+        # 绘制标题 - 左上角
         if self.level_completed:
             title_color = (100, 255, 100)
             title_text = "关卡完成！"
@@ -176,30 +176,42 @@ class LevelGameOverMenu:
         )
         
         title_surface = self.font_manager.render_text(title_text, 'title', title_color)
-        title_rect = title_surface.get_rect(center=(self.config.SCREEN_W // 2, 100))
+        title_rect = title_surface.get_rect(topleft=(50, 50))
         surface.blit(title_surface, title_rect)
         
-        # 绘制关卡信息
+        # 绘制关卡信息 - 右上角
         self._draw_level_info(surface)
         
-        # 绘制游戏统计
+        # 绘制游戏统计 - 右上角（在关卡信息下方）
         if self.game_state:
             self._draw_game_stats(surface)
         
-        # 绘制菜单选项
+        # 绘制菜单选项 - 左侧垂直布局
         self._draw_menu_options(surface)
         
-        # 绘制控制提示
+        # 绘制控制提示 - 右下角
         self._draw_controls_help(surface)
 
     def _draw_level_info(self, surface):
-        """绘制关卡信息"""
-        level_y = 160
+        """绘制关卡信息 - 右上角面板"""
+        # 创建右上角信息面板
+        panel_width = 300
+        panel_height = 120
+        panel_x = self.config.SCREEN_W - panel_width - 50
+        panel_y = 50
+        
+        # 绘制半透明背景面板
+        panel = pygame.Surface((panel_width, panel_height), pygame.SRCALPHA)
+        panel.fill((0, 0, 0, 150))
+        pygame.draw.rect(panel, (100, 100, 255, 200), panel.get_rect(), 2)
+        surface.blit(panel, (panel_x, panel_y))
+        
+        level_y = panel_y + 20
         
         # 关卡进度
         level_text = f"第 {self.current_level} 关 ({self.current_level}/{self.total_levels})"
         level_surface = self.font_manager.render_text(level_text, 'large', (200, 200, 200))
-        level_rect = level_surface.get_rect(center=(self.config.SCREEN_W // 2, level_y))
+        level_rect = level_surface.get_rect(topleft=(panel_x + 20, level_y))
         surface.blit(level_surface, level_rect)
         
         # 状态提示
@@ -212,29 +224,56 @@ class LevelGameOverMenu:
             status_color = (255, 200, 100)
             
         status_surface = self.font_manager.render_text(status_text, 'medium', status_color)
-        status_rect = status_surface.get_rect(center=(self.config.SCREEN_W // 2, status_y))
+        status_rect = status_surface.get_rect(topleft=(panel_x + 20, status_y))
         surface.blit(status_surface, status_rect)
 
     def _draw_game_stats(self, surface):
-        """绘制游戏统计信息"""
-        stats_y = 220
+        """绘制游戏统计信息 - 右上角（在关卡信息下方）"""
+        if not self.game_state:
+            return
+            
+        # 创建统计信息面板
+        panel_width = 300
+        panel_height = 100
+        panel_x = self.config.SCREEN_W - panel_width - 50
+        panel_y = 190  # 在关卡信息面板下方
+        
+        # 绘制半透明背景面板
+        panel = pygame.Surface((panel_width, panel_height), pygame.SRCALPHA)
+        panel.fill((0, 0, 0, 150))
+        pygame.draw.rect(panel, (255, 200, 100, 200), panel.get_rect(), 2)
+        surface.blit(panel, (panel_x, panel_y))
+        
+        stats_y = panel_y + 20
         stats_color = (200, 200, 200)
         
         if hasattr(self.game_state, 'score'):
             score_text = f"得分: {self.game_state.score}"
             score_surface = self.font_manager.render_text(score_text, 'large', (255, 255, 100))
-            score_rect = score_surface.get_rect(center=(self.config.SCREEN_W // 2, stats_y))
+            score_rect = score_surface.get_rect(topleft=(panel_x + 20, stats_y))
             surface.blit(score_surface, score_rect)
         
         if hasattr(self.game_state, 'snake') and hasattr(self.game_state.snake, 'get_length'):
             length_text = f"蛇身长度: {self.game_state.snake.get_length()}"
             length_surface = self.font_manager.render_text(length_text, 'medium', stats_color)
-            length_rect = length_surface.get_rect(center=(self.config.SCREEN_W // 2, stats_y + 35))
+            length_rect = length_surface.get_rect(topleft=(panel_x + 20, stats_y + 35))
             surface.blit(length_surface, length_rect)
 
     def _draw_menu_options(self, surface):
-        """绘制菜单选项"""
-        menu_start_y = 300
+        """绘制菜单选项 - 左侧垂直布局"""
+        # 创建左侧菜单面板
+        panel_width = 280
+        panel_height = min(350, len(self.menu_options) * 45 + 40)
+        panel_x = 50
+        panel_y = 150
+        
+        # 绘制半透明背景面板
+        panel = pygame.Surface((panel_width, panel_height), pygame.SRCALPHA)
+        panel.fill((0, 0, 0, 150))
+        pygame.draw.rect(panel, (100, 100, 255, 200), panel.get_rect(), 2)
+        surface.blit(panel, (panel_x, panel_y))
+        
+        menu_start_y = panel_y + 20
         
         for i, option in enumerate(self.menu_options):
             # 检查选项是否可用
@@ -244,21 +283,20 @@ class LevelGameOverMenu:
             elif option == "上一关" and self.current_level <= 1:
                 is_available = False
             
-            # 选中项高亮
+            option_y = menu_start_y + i * 45
+            
+            # 选中项高亮显示
             if i == self.selected_option:
                 color = (255, 255, 100) if is_available else (150, 150, 150)
                 # 绘制选中背景
-                option_bg = pygame.Surface((300, 45))
-                option_bg.set_alpha(100)
+                option_bg = pygame.Surface((panel_width - 40, 35), pygame.SRCALPHA)
                 if self.level_completed:
-                    option_bg.fill((100, 255, 100))
+                    option_bg.fill((100, 255, 100, 120))  # 绿色背景
                 else:
-                    option_bg.fill((255, 100, 100))
-                bg_rect = option_bg.get_rect(center=(self.config.SCREEN_W // 2, menu_start_y + i * 50))
-                if is_available:
-                    surface.blit(option_bg, bg_rect)
+                    option_bg.fill((255, 100, 100, 120))  # 红色背景
+                surface.blit(option_bg, (panel_x + 20, option_y + 15))
             else:
-                color = (200, 200, 200) if is_available else (100, 100, 100)
+                color = (220, 220, 220) if is_available else (100, 100, 100)
             
             # 不可用选项添加特殊标记
             option_text = option
@@ -266,13 +304,25 @@ class LevelGameOverMenu:
                 option_text = f"{option} (不可用)"
             
             option_surface = self.font_manager.render_text(option_text, 'menu', color)
-            option_rect = option_surface.get_rect(center=(self.config.SCREEN_W // 2, menu_start_y + i * 50))
+            option_rect = option_surface.get_rect(topleft=(panel_x + 30, option_y + 5))
             surface.blit(option_surface, option_rect)
 
     def _draw_controls_help(self, surface):
-        """绘制控制提示"""
-        help_y = 550
-        help_color = (150, 150, 150)
+        """绘制控制提示 - 右下角"""
+        # 创建右下角控制提示面板
+        panel_width = 300
+        panel_height = 120
+        panel_x = self.config.SCREEN_W - panel_width - 50
+        panel_y = self.config.SCREEN_H - panel_height - 50
+        
+        # 绘制半透明背景面板
+        panel = pygame.Surface((panel_width, panel_height), pygame.SRCALPHA)
+        panel.fill((0, 0, 0, 150))
+        pygame.draw.rect(panel, (100, 255, 100, 200), panel.get_rect(), 2)
+        surface.blit(panel, (panel_x, panel_y))
+        
+        help_y = panel_y + 20
+        help_color = (180, 255, 180)
         
         help_texts = [
             "↑↓ 或 W/S: 选择选项",
@@ -288,7 +338,7 @@ class LevelGameOverMenu:
         
         for i, text in enumerate(help_texts):
             help_surface = self.font_manager.render_text(text, 'help', help_color)
-            help_rect = help_surface.get_rect(center=(self.config.SCREEN_W // 2, help_y + i * 25))
+            help_rect = help_surface.get_rect(topleft=(panel_x + 20, help_y + i * 25))
             surface.blit(help_surface, help_rect)
 
     def get_action(self):

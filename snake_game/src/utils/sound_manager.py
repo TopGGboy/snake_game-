@@ -206,10 +206,19 @@ class SoundManager:
 
     def switch_to_main_music(self):
         """切换到主界面音乐"""
-        # 强制停止所有音乐播放
-        self.force_stop_all_music()
+        # 确保游戏运行时背景音乐被正确关闭
+        if self.current_music_type == "game":
+            # 如果是游戏运行时音乐，先停止所有音乐
+            self.force_stop_all_music()
+        else:
+            # 对于其他音乐类型，也停止当前音乐
+            self.stop_background_music()
         
-        # 直接加载并播放主界面音乐
+        # 重置音乐状态
+        self.is_music_playing = False
+        self.current_music_type = None
+        
+        # 加载并播放主界面音乐
         if self.load_background_music("assets/sound/main.mp3", "main"):
             return self.play_background_music()
         return False
