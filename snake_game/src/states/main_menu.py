@@ -164,7 +164,7 @@ class MainMenu:
 
     def _draw_title(self, surface):
         """绘制标题（带渐变效果）"""
-        title_text = "贪吃蛇游戏"
+        title_text = "果香蛇踪"
         title_font = self.font_manager.get_font('title')
         
         # 创建标题表面

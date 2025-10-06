@@ -34,8 +34,8 @@ SNAKE_SKINS = {
         }
     },
     "snake1": {
-        "name": "火焰大蛇",
-        "description": "炽热的橙色蛇形象",
+        "name": "草原绿蟒",
+        "description": "热带的绿蟒蛇形象",
         "image_prefix": "snake1",
         "skin_id": 1,
         "unlocked": True,

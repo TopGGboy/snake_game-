@@ -24,6 +24,7 @@ class Game:
         pygame.init()
         # 创建显示窗口
         self.screen = pygame.display.set_mode(Config.SCREEN_SIZE)
+        pygame.display.set_caption("果香蛇踪")  # 设置窗口标题
         self.clock = pygame.time.Clock()  # 创建时钟对象的控制频率
 
         self.state = MainMenu()  # 当前游戏状态， 默认围为主菜单
