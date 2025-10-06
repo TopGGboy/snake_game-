@@ -109,8 +109,15 @@ class SoundManager:
                     self.is_music_playing = True
                     print(f"播放预加载音乐: {music_type}")
                     return True
+                else:
+                    # 播放失败，确保状态正确
+                    self.is_music_playing = False
+                    print(f"播放预加载音乐失败: 无法获取播放通道")
+                    return False
             except Exception as e:
                 print(f"播放预加载音乐失败: {e}")
+                self.is_music_playing = False
+                return False
         
         # 回退到传统方式
         if music_type in self.music_cache:
@@ -138,6 +145,23 @@ class SoundManager:
                             print("音乐无缝循环播放")
                     except Exception as e:
                         print(f"音乐循环播放失败: {e}")
+
+    def force_stop_all_music(self):
+        """强制停止所有音乐播放，包括预加载音乐和传统音乐"""
+        # 使用pygame的底层方法停止所有声音
+        try:
+            # 停止所有正在播放的频道
+            pygame.mixer.stop()
+            # 停止背景音乐
+            pygame.mixer.music.stop()
+            # 重置所有频道
+            pygame.mixer.find_channel(True)
+        except Exception as e:
+            print(f"强制停止所有音乐失败: {e}")
+        
+        # 重置状态
+        self.is_music_playing = False
+        print("所有音乐已强制停止")
 
     def stop_background_music(self):
         """停止背景音乐"""
@@ -182,27 +206,24 @@ class SoundManager:
 
     def switch_to_main_music(self):
         """切换到主界面音乐"""
-        # 使用预加载的音乐，避免重新加载文件
-        if self.play_preloaded_music("main"):
-            return True
-        # 如果预加载失败，尝试直接加载
-        elif self.load_background_music("assets/sound/main.mp3", "main"):
-            # 立即停止当前音乐
-            if self.is_music_playing:
-                self.stop_background_music()
+        # 强制停止所有音乐播放
+        self.force_stop_all_music()
+        
+        # 直接加载并播放主界面音乐
+        if self.load_background_music("assets/sound/main.mp3", "main"):
             return self.play_background_music()
         return False
 
     def switch_to_game_music(self):
         """切换到游戏运行时音乐"""
+        # 强制停止所有音乐播放，确保主界面音乐被关闭
+        self.force_stop_all_music()
+        
         # 使用预加载的音乐，避免重新加载文件
         if self.play_preloaded_music("game"):
             return True
         # 如果预加载失败，尝试直接加载
         elif self.load_background_music("assets/sound/run_background.mp3", "game"):
-            # 立即停止当前音乐
-            if self.is_music_playing:
-                self.stop_background_music()
             return self.play_background_music()
         return False
 

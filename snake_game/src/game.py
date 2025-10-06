@@ -96,7 +96,6 @@ class Game:
                 # 返回主菜单
                 # 切换到主界面音乐
                 self.sound_manager.switch_to_main_music()
-                self.sound_manager.play_background_music()
 
                 self.state = MainMenu()
                 self.state.finished = False
