@@ -108,70 +108,102 @@ class PauseMenu:
         overlay.fill((0, 0, 0))
         surface.blit(overlay, (0, 0))
 
-        # 绘制暂停标题
-        title_text = self.font_manager.render_text("游戏暂停", 'title', (255, 255, 255))
-        title_rect = title_text.get_rect(center=(self.config.SCREEN_W // 2, 120))
+        # 创建半透明覆盖层
+        overlay = pygame.Surface((self.config.SCREEN_W, self.config.SCREEN_H))
+        overlay.set_alpha(self.fade_alpha)
+        overlay.fill((0, 0, 0))
+        surface.blit(overlay, (0, 0))
+
+        # 绘制暂停标题（左上角）
+        title_text = self.font_manager.render_text("游戏暂停", 'large', (255, 255, 255))
+        title_rect = title_text.get_rect(topleft=(50, 50))
         surface.blit(title_text, title_rect)
 
-        # 绘制游戏统计信息（如果有游戏状态）
+        # 绘制游戏统计信息（右上角）
         if self.game_state:
-            self._draw_game_stats(surface)
+            self._draw_game_stats(surface, 50, 50)
 
-        # 绘制菜单选项
-        menu_start_y = 280
+        # 绘制菜单选项（左侧垂直布局）
+        menu_start_x = 100
+        menu_start_y = 150
         for i, option in enumerate(self.menu_options):
+            option_y = menu_start_y + i * 80  # 增加间距到80像素
+            
             # 选中项高亮显示
             if i == self.selected_option:
-                color = (255, 255, 100)  # 黄色高亮
-                # 绘制选中背景
-                option_bg = pygame.Surface((300, 50))
-                option_bg.set_alpha(100)
-                option_bg.fill((255, 255, 100))
-                bg_rect = option_bg.get_rect(center=(self.config.SCREEN_W // 2, menu_start_y + i * 60))
+                color = (255, 220, 50)  # 金色高亮
+                # 绘制选中背景（带圆角）
+                option_bg = pygame.Surface((250, 50), pygame.SRCALPHA)
+                pygame.draw.rect(option_bg, (255, 220, 50, 80), (0, 0, 250, 50), border_radius=8)
+                bg_rect = option_bg.get_rect(topleft=(menu_start_x - 10, option_y - 5))
                 surface.blit(option_bg, bg_rect)
+                
+                # 绘制选中指示器
+                indicator_size = 8
+                indicator_points = [
+                    (menu_start_x - 20, option_y + 10),
+                    (menu_start_x - 5, option_y + 2),
+                    (menu_start_x - 5, option_y + 18)
+                ]
+                pygame.draw.polygon(surface, (255, 220, 50), indicator_points)
             else:
-                color = (200, 200, 200)  # 普通白色
+                color = (220, 220, 220)  # 普通白色
 
             option_text = self.font_manager.render_text(option, 'menu', color)
-            option_rect = option_text.get_rect(center=(self.config.SCREEN_W // 2, menu_start_y + i * 60))
+            option_rect = option_text.get_rect(topleft=(menu_start_x, option_y))
             surface.blit(option_text, option_rect)
 
-        # 绘制控制提示
-        self._draw_controls_help(surface)
+        # 绘制控制提示（右下角）
+        self._draw_controls_help(surface, self.config.SCREEN_W - 300, self.config.SCREEN_H - 120)
 
-    def _draw_game_stats(self, surface):
+    def _draw_game_stats(self, surface, start_x, start_y):
         """
         绘制游戏统计信息
         :param surface: 绘制表面
+        :param start_x: 起始X坐标
+        :param start_y: 起始Y坐标
         """
-        stats_y = 180
-        stats_color = (180, 180, 180)
+        stats_color = (200, 200, 220)  # 更亮的统计信息颜色
+        spacing = 35  # 增加行间距
+
+        # 绘制统计信息背景面板
+        stats_bg = pygame.Surface((250, 120), pygame.SRCALPHA)
+        stats_bg.fill((30, 30, 40, 180))  # 半透明背景
+        stats_bg_rect = stats_bg.get_rect(topright=(self.config.SCREEN_W - start_x, start_y))
+        surface.blit(stats_bg, stats_bg_rect)
+
+        # 绘制边框
+        pygame.draw.rect(surface, (80, 80, 120), stats_bg_rect, 2, border_radius=5)
 
         # 获取游戏统计信息
+        current_y = start_y + 20
         if hasattr(self.game_state, 'score'):
-            score_text = self.font_manager.render_text(f"当前得分: {self.game_state.score}", 'large', stats_color)
-            score_rect = score_text.get_rect(center=(self.config.SCREEN_W // 2, stats_y))
+            score_text = self.font_manager.render_text(f"得分: {self.game_state.score}", 'medium', stats_color)
+            score_rect = score_text.get_rect(topright=(self.config.SCREEN_W - start_x - 20, current_y))
             surface.blit(score_text, score_rect)
+            current_y += spacing
 
         if hasattr(self.game_state, 'snake') and hasattr(self.game_state.snake, 'get_length'):
-            length_text = self.font_manager.render_text(f"蛇身长度: {self.game_state.snake.get_length()}", 'medium',
-                                                        stats_color)
-            length_rect = length_text.get_rect(center=(self.config.SCREEN_W // 2, stats_y + 35))
+            length_text = self.font_manager.render_text(f"长度: {self.game_state.snake.get_length()}", 'medium', stats_color)
+            length_rect = length_text.get_rect(topright=(self.config.SCREEN_W - start_x - 20, current_y))
             surface.blit(length_text, length_rect)
+            current_y += spacing
 
         if hasattr(self.game_state, 'difficulty_config'):
             difficulty_name = self.game_state.difficulty_config.get('name', '未知')
             difficulty_text = self.font_manager.render_text(f"难度: {difficulty_name}", 'medium', stats_color)
-            difficulty_rect = difficulty_text.get_rect(center=(self.config.SCREEN_W // 2, stats_y + 65))
+            difficulty_rect = difficulty_text.get_rect(topright=(self.config.SCREEN_W - start_x - 20, current_y))
             surface.blit(difficulty_text, difficulty_rect)
 
-    def _draw_controls_help(self, surface):
+    def _draw_controls_help(self, surface, start_x, start_y):
         """
         绘制控制提示
         :param surface: 绘制表面
+        :param start_x: 起始X坐标
+        :param start_y: 起始Y坐标
         """
-        help_y = 520
-        help_color = (150, 150, 150)
+        help_color = (180, 180, 200)  # 更亮的帮助文本颜色
+        spacing = 25  # 增加行间距
 
         help_texts = [
             "↑↓ 或 W/S: 选择选项",
@@ -179,9 +211,18 @@ class PauseMenu:
             "ESC: 直接继续游戏"
         ]
 
+        # 绘制帮助文本背景
+        help_bg = pygame.Surface((280, len(help_texts) * spacing + 15), pygame.SRCALPHA)
+        help_bg.fill((30, 30, 40, 150))  # 深色半透明背景
+        help_bg_rect = help_bg.get_rect(bottomright=(start_x + 280, start_y + len(help_texts) * spacing))
+        surface.blit(help_bg, help_bg_rect)
+
+        # 绘制边框
+        pygame.draw.rect(surface, (80, 80, 120), help_bg_rect, 2, border_radius=5)
+
         for i, text in enumerate(help_texts):
             help_surface = self.font_manager.render_text(text, 'help', help_color)
-            help_rect = help_surface.get_rect(center=(self.config.SCREEN_W // 2, help_y + i * 25))
+            help_rect = help_surface.get_rect(bottomright=(start_x + 260, start_y + i * spacing))
             surface.blit(help_surface, help_rect)
 
     def get_action(self):
