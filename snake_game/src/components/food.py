@@ -18,7 +18,7 @@ class Food(pygame.sprite.Sprite):
     # 类级别的调试开关
     DEBUG_COLLISION = False
 
-    def __init__(self, food_name: str = None, size: int = None):
+    def __init__(self, food_name: str = None, size: int = None, wall_manager=None):
         pygame.sprite.Sprite.__init__(self)
 
         # 随机选择食物类型或使用指定的类型
@@ -29,6 +29,7 @@ class Food(pygame.sprite.Sprite):
 
         self.size = size if size is not None else food_config["size"]
         self.config = Config.get_instance()
+        self.wall_manager = wall_manager  # 墙壁管理器实例
 
         # 食物属性（需要在位置生成前设置）
         self.score_value = food_config["score_value"]
@@ -59,7 +60,7 @@ class Food(pygame.sprite.Sprite):
     def randomize_position(self, avoid_positions: Optional[List[Tuple[float, float]]] = None) -> None:
         """
         随机生成食物位置 - 适配顺滑移动，不再依赖网格
-        :param avoid_positions: 要避免的位置列表（蛇的身体位置）
+        :param avoid_positions: 要避免的位置列表（蛇的身体位置和墙壁位置）
         """
         if avoid_positions is None:
             avoid_positions = []
@@ -79,12 +80,11 @@ class Food(pygame.sprite.Sprite):
             y = random.uniform(min_y, max_y)
             position = (x, y)
 
-            # 检查是否与避免位置冲突，并且离墙壁足够远
-            if (not self._is_position_occupied(position, avoid_positions) and 
-                self._is_position_away_from_walls(position)):
+            # 检查是否与避免位置冲突（包括蛇身体和墙壁）
+            if not self._is_position_occupied(position, avoid_positions):
                 self.position = [x, y]
                 self.rect.center = (int(x), int(y))
-                print(f"食物生成在位置: ({x:.1f}, {y:.1f}) - 距离墙壁安全")
+                print(f"食物生成在位置: ({x:.1f}, {y:.1f}) - 安全位置")
                 return
 
         # 如果找不到合适位置，使用屏幕中心（确保中心位置安全）
@@ -106,17 +106,28 @@ class Food(pygame.sprite.Sprite):
         """
         检查位置是否被占用 - 使用圆形碰撞检测
         :param position: 要检查的位置
-        :param avoid_positions: 要避免的位置列表
+        :param avoid_positions: 要避免的位置列表（包含蛇身体和墙壁位置）
         :return: 是否被占用
         """
-        # 使用更合理的安全距离，确保食物不会生成在蛇身上
+        # 使用更合理的安全距离，确保食物不会生成在蛇身上或墙壁上
         safe_distance = GameBalance.SMOOTH_COLLISION_RADIUS + self.collision_radius + 10
 
+        # 检查避免位置列表（蛇身体和传入的墙壁位置）
         for avoid_pos in avoid_positions:
             distance = self._calculate_distance(position, avoid_pos)
             if distance < safe_distance:
                 return True
-        return False
+        
+        # 额外检查墙壁管理器中的墙壁位置
+        if self.wall_manager:
+            wall_positions = self.wall_manager.get_wall_positions()
+            for wall_pos in wall_positions:
+                distance = self._calculate_distance(position, wall_pos)
+                if distance < safe_distance:
+                    return True
+        
+        # 检查四周墙壁距离
+        return not self._is_position_away_from_walls(position)
 
     def _is_position_away_from_walls(self, position: Tuple[float, float]) -> bool:
         """
@@ -206,6 +217,13 @@ class Food(pygame.sprite.Sprite):
         print(
             f"食物重置为 {self.display_name}({self.food_name})，尺寸: {self.image.get_size()}，分数: {self.score_value}")
 
+    def set_wall_manager(self, wall_manager) -> None:
+        """
+        设置墙壁管理器实例
+        :param wall_manager: 墙壁管理器实例
+        """
+        self.wall_manager = wall_manager
+
     def get_position(self) -> Tuple[float, float]:
         """获取食物中心位置（浮点坐标）"""
         return (self.position[0], self.position[1])
@@ -241,14 +259,16 @@ class Food(pygame.sprite.Sprite):
 class FoodManager:
     """食物管理器 - 管理多个食物"""
 
-    def __init__(self, max_food_count: int = 1):
+    def __init__(self, max_food_count: int = 1, wall_manager=None):
         self.max_food_count = max_food_count
         self.foods: List[Food] = []
         self.score = 0
+        self.wall_manager = wall_manager
 
         # 创建初始食物
         for _ in range(self.max_food_count):
-            self.foods.append(Food())
+            food = Food(wall_manager=self.wall_manager)
+            self.foods.append(food)
 
     def update(self, dt: int, snake_head_pos: Tuple[float, float], snake_body_positions: List[Tuple[float, float]],
                snake_head_rect: pygame.Rect = None) -> int:
@@ -305,3 +325,12 @@ class FoodManager:
         self.score = 0
         for food in self.foods:
             food.reset()
+
+    def set_wall_manager(self, wall_manager) -> None:
+        """
+        设置墙壁管理器实例
+        :param wall_manager: 墙壁管理器实例
+        """
+        self.wall_manager = wall_manager
+        for food in self.foods:
+            food.set_wall_manager(wall_manager)

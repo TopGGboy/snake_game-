@@ -69,12 +69,12 @@ class LevelMode:
         # 应用关卡配置
         self._apply_level_config()
 
-        # 创建食物管理器
-        self.food_manager = FoodManager(max_food_count=GameBalance.MAX_FOOD_COUNT)
-
         # 创建墙管理器并加载墙体
         self.wall_manager = WallManager()
         self._setup_walls()
+
+        # 创建食物管理器
+        self.food_manager = FoodManager(max_food_count=GameBalance.MAX_FOOD_COUNT, wall_manager=self.wall_manager)
 
         # 关卡导航相关属性
         self.available_levels = self._get_available_levels()

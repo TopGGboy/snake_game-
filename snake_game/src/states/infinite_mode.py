@@ -67,12 +67,12 @@ class InfiniteMode:
         # 根据JSON配置设置游戏参数
         self._apply_json_config()
 
-        # 创建食物管理器
-        self.food_manager = FoodManager(max_food_count=GameBalance.MAX_FOOD_COUNT)
-
         # 创建墙管理器并加载墙体
         self.wall_manager = WallManager()
         self._setup_walls()
+
+        # 创建食物管理器，传递墙壁管理器实例
+        self.food_manager = FoodManager(max_food_count=GameBalance.MAX_FOOD_COUNT, wall_manager=self.wall_manager)
 
         # 创建暂停菜单实例
         self.pause_menu = PauseMenu(game_state=self)
