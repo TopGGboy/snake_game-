@@ -179,7 +179,7 @@ class Snake(pygame.sprite.Sprite):
         # 检查加速按键（空格键）
         was_boosting = self.is_boosting
         self.is_boosting = keys[pygame.K_SPACE]
-        
+
         # 如果加速状态发生变化，控制加速音效的循环播放
         if self.is_boosting and not was_boosting:
             # 开始加速，开始循环播放加速音效
