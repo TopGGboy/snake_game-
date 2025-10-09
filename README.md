@@ -1,4 +1,3 @@
-[贪吃蛇游戏程序说明文档.md](https://github.com/user-attachments/files/22792263/default.md)
 # "果香蛇踪"游戏程序说明文档
 
 **版权声明**
