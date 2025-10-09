@@ -11,4 +11,5 @@ def main():
 
 
 if __name__ == "__main__":
+    # 游戏主函数
     main()
