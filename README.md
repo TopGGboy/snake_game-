@@ -68,6 +68,7 @@
 | 🍎 苹果 (10分) | ![苹果](snake_game/assets/graphics/food/food0.png) | 🐍 黄金小蛇 | ![黄金蛇头](snake_game/assets/graphics/snake/snake0/snake0_head.png) |
 | 🍉 西瓜 (20分) | ![西瓜](snake_game/assets/graphics/food/food1.png) | 🐍 草原绿蟒 | ![绿蟒蛇头](snake_game/assets/graphics/snake/snake1/snake1_head.png) |
 
+<<<<<<< HEAD
 ---
 
 ## 🎮 游戏演示与截图
@@ -82,6 +83,8 @@
 
 ---
 
+=======
+>>>>>>> origin/master
 ## 🏗️ 项目架构
 
 本项目采用 **状态机模式 (State Machine)** + **组件化架构**：
